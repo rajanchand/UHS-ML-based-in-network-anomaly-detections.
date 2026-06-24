@@ -12,7 +12,7 @@ Security features:
 
 from datetime import datetime, timezone
 
-import bcrypt
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 
 from app.extensions import db, login_manager
@@ -42,7 +42,7 @@ class User(UserMixin, db.Model):
     )
     password_hash = db.Column(
         db.String(128), nullable=False,
-        comment='bcrypt hashed password — never store plaintext'
+        comment='hashed password — never store plaintext'
     )
     role = db.Column(
         db.String(20), nullable=False, default='analyst',
@@ -73,14 +73,12 @@ class User(UserMixin, db.Model):
 
     def set_password(self, password):
         """
-        Hash and store the user's password using bcrypt.
+        Hash and store the user's password using werkzeug.security.
 
         Args:
             password: Plaintext password to hash.
         """
-        password_bytes = password.encode('utf-8')
-        salt = bcrypt.gensalt(rounds=12)  # Work factor of 12
-        self.password_hash = bcrypt.hashpw(password_bytes, salt).decode('utf-8')
+        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 
     def check_password(self, password):
         """
@@ -92,9 +90,7 @@ class User(UserMixin, db.Model):
         Returns:
             True if the password matches, False otherwise.
         """
-        password_bytes = password.encode('utf-8')
-        hash_bytes = self.password_hash.encode('utf-8')
-        return bcrypt.checkpw(password_bytes, hash_bytes)
+        return check_password_hash(self.password_hash, password)
 
     def has_role(self, *roles):
         """
