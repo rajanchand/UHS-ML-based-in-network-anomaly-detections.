@@ -12,7 +12,9 @@ Classes:
 """
 
 import os
+import socket
 from datetime import timedelta
+from urllib.parse import urlparse, urlunparse
 
 # Base directory of the project
 BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
@@ -20,6 +22,39 @@ IS_VERCEL = os.environ.get('VERCEL') == '1'
 
 # Use /tmp for writable directories under Vercel serverless environment
 DATA_DIR = '/tmp' if IS_VERCEL else BASE_DIR
+
+
+def _resolve_db_host_to_ipv4(url_str):
+    """
+    Resolve the database host to an IPv4 address dynamically.
+    This bypasses IPv6 socket connection issues on Vercel's AWS Lambda network environment,
+    which does not support outbound IPv6 connections (Errno 99: Cannot assign requested address).
+    """
+    if not url_str:
+        return url_str
+    try:
+        parsed = urlparse(url_str)
+        if parsed.hostname:
+            ipv4_address = socket.gethostbyname(parsed.hostname)
+            netloc = parsed.netloc
+            if parsed.port:
+                old_host = f"{parsed.hostname}:{parsed.port}"
+                new_host = f"{ipv4_address}:{parsed.port}"
+            else:
+                old_host = parsed.hostname
+                new_host = ipv4_address
+            
+            if old_host in netloc:
+                netloc = netloc.replace(old_host, new_host, 1)
+            elif parsed.hostname in netloc:
+                netloc = netloc.replace(parsed.hostname, ipv4_address, 1)
+                
+            parsed = parsed._replace(netloc=netloc)
+            return urlunparse(parsed)
+    except Exception:
+        # Fallback to the original URL
+        return url_str
+    return url_str
 
 
 class Config:
@@ -35,6 +70,9 @@ class Config:
     _db_url = os.environ.get('DATABASE_URL')
     if _db_url and _db_url.startswith('postgres://'):
         _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+    
+    if IS_VERCEL:
+        _db_url = _resolve_db_host_to_ipv4(_db_url)
 
     SQLALCHEMY_DATABASE_URI = _db_url or f'sqlite:///{os.path.join(DATA_DIR, "anomaly_detection.db" if IS_VERCEL else os.path.join("instance", "anomaly_detection.db"))}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
