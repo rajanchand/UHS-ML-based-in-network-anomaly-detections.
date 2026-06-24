@@ -15,4 +15,5 @@ from app.extensions import db
 app = create_app()
 
 with app.app_context():
-    db.create_all()
+    if db.engine.url.drivername == 'sqlite':
+        db.create_all()
