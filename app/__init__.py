@@ -40,7 +40,10 @@ def create_app(config_name=None):
 
     # Load configuration
     if config_name is None:
-        config_name = os.environ.get('FLASK_ENV', 'development')
+        if os.environ.get('VERCEL') == '1':
+            config_name = 'production'
+        else:
+            config_name = os.environ.get('FLASK_ENV', 'development')
     app.config.from_object(config_map.get(config_name, config_map['default']))
 
     # Initialise extensions
