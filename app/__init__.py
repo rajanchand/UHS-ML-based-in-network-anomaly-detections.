@@ -135,7 +135,10 @@ def _register_error_handlers(app):
     @app.errorhandler(500)
     def internal_error(error):
         """Handle unexpected server errors. Never expose internal details in prod, show traceback for debugging."""
-        db.session.rollback()  # Roll back any failed transactions
+        try:
+            db.session.rollback()  # Roll back any failed transactions
+        except Exception:
+            pass
         import traceback
         tb = traceback.format_exc()
         app.logger.error(f'Internal server error: {error}\n{tb}')
