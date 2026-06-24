@@ -35,6 +35,10 @@ class Report(db.Model):
         db.String(50), nullable=False, default='full',
         comment='Report type: full, summary, executive'
     )
+    pdf_content = db.Column(
+        db.LargeBinary, nullable=True,
+        comment='Binary PDF report content'
+    )
     generated_at = db.Column(
         db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )

@@ -64,6 +64,10 @@ class Dataset(db.Model):
         db.Text, default='',
         comment='JSON-encoded validation error messages'
     )
+    file_content = db.Column(
+        db.Text, nullable=True,
+        comment='CSV string content of the dataset'
+    )
     uploaded_at = db.Column(
         db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )

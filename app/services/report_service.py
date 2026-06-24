@@ -65,12 +65,17 @@ class ReportService:
             # Build the PDF document
             ReportService._build_pdf(file_path, analysis, report_type)
 
+            # Read binary content to store in database
+            with open(file_path, 'rb') as f:
+                pdf_content = f.read()
+
             # Create report record
             report = Report(
                 analysis_id=analysis_id,
                 user_id=user_id,
                 filename=filename,
                 report_type=report_type,
+                pdf_content=pdf_content,
             )
             db.session.add(report)
             db.session.commit()
@@ -325,4 +330,13 @@ class ReportService:
     @staticmethod
     def get_report_path(report):
         """Get the full filesystem path to a report PDF."""
-        return os.path.join(current_app.config['REPORTS_DIR'], report.filename)
+        report_path = os.path.join(current_app.config['REPORTS_DIR'], report.filename)
+        # Recreate file from database if missing on disk (Vercel serverless)
+        if not os.path.exists(report_path) and report.pdf_content:
+            try:
+                os.makedirs(os.path.dirname(report_path), exist_ok=True)
+                with open(report_path, 'wb') as f:
+                    f.write(report.pdf_content)
+            except Exception as e:
+                current_app.logger.error(f"Failed to restore report PDF from DB: {str(e)}")
+        return report_path

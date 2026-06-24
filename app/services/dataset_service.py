@@ -89,7 +89,11 @@ class DatasetService:
             columns_list = json.dumps(list(df.columns))
 
             # Count rows efficiently without loading full file
-            row_count = sum(1 for _ in open(file_path, 'r', encoding='utf-8')) - 1
+            row_count = sum(1 for _ in open(file_path, 'r', encoding='utf-8', errors='ignore')) - 1
+
+            # Read file content to store in database
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                file_content = f.read()
 
             # Create dataset record
             dataset = Dataset(
@@ -102,6 +106,7 @@ class DatasetService:
                 column_count=column_count,
                 columns_list=columns_list,
                 status='validated',
+                file_content=file_content,
             )
             db.session.add(dataset)
             db.session.commit()
@@ -203,6 +208,16 @@ class DatasetService:
             current_app.config['UPLOAD_FOLDER'], dataset.filename
         )
 
+        # Recreate file from database if missing on disk (Vercel serverless)
+        if not os.path.exists(file_path) and dataset.file_content:
+            try:
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(dataset.file_content)
+            except Exception as e:
+                current_app.logger.error(f"Failed to restore dataset file from DB: {str(e)}")
+                return None
+
         if not os.path.exists(file_path):
             return None
 
@@ -228,6 +243,17 @@ class DatasetService:
         file_path = os.path.join(
             current_app.config['UPLOAD_FOLDER'], dataset.filename
         )
+
+        # Recreate file from database if missing on disk (Vercel serverless)
+        if not os.path.exists(file_path) and dataset.file_content:
+            try:
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(dataset.file_content)
+            except Exception as e:
+                current_app.logger.error(f"Failed to restore dataset file from DB: {str(e)}")
+                return None
+
         if not os.path.exists(file_path):
             return None
 

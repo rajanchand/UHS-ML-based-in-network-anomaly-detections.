@@ -66,6 +66,12 @@ class AnalysisService:
                 current_app.config['UPLOAD_FOLDER'], dataset.filename
             )
 
+            # Recreate file from database if missing on disk (Vercel serverless)
+            if not os.path.exists(file_path) and dataset.file_content:
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(dataset.file_content)
+
             # Execute the ML pipeline
             pipeline = MLPipeline(file_path, model_type, target_column)
             results = pipeline.execute()
