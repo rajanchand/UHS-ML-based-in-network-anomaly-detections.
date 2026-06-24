@@ -33,8 +33,11 @@ class Config:
     
     # --- Database ---
     _db_url = os.environ.get('DATABASE_URL')
-    if _db_url and _db_url.startswith('postgres://'):
-        _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+    if _db_url:
+        if _db_url.startswith('postgres://'):
+            _db_url = _db_url.replace('postgres://', 'postgresql+pg8000://', 1)
+        elif _db_url.startswith('postgresql://'):
+            _db_url = _db_url.replace('postgresql://', 'postgresql+pg8000://', 1)
 
     SQLALCHEMY_DATABASE_URI = _db_url or f'sqlite:///{os.path.join(DATA_DIR, "anomaly_detection.db" if IS_VERCEL else os.path.join("instance", "anomaly_detection.db"))}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
