@@ -1,0 +1,403 @@
+{% extends 'base.html' %}
+{% block title %}Analysis Results - Aegis ML-IDS{% endblock %}
+
+{% block head %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <a href="{{ url_for('analysis.list_view') }}" class="text-muted text-decoration-none fs-7 d-inline-flex align-items-center mb-2">
+            <i class="bi bi-arrow-left me-1"></i> Back to History
+        </a>
+        <h2 class="fw-bold tracking-tight text-dark mb-1">Analysis Results #{{ analysis.id }}</h2>
+        <p class="text-muted fs-7 mb-0">Model: <span class="fw-semibold text-dark text-capitalize">{{ analysis.model_type.replace('_', ' ') }}</span> | Dataset ID: {{ analysis.dataset_id }}</p>
+    </div>
+    <div class="col-md-4 text-md-end mt-3 mt-md-0 d-flex gap-2 justify-content-md-end">
+        <!-- PDF Generation Form -->
+        <form method="POST" action="{{ url_for('reports.generate') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="analysis_id" value="{{ analysis.id }}">
+            <input type="hidden" name="report_type" value="full">
+            <button type="submit" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-2 fs-7">
+                <i class="bi bi-file-earmark-pdf-fill me-1"></i> Generate PDF Report
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Threat Score Card -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white text-center h-100">
+            <h5 class="fw-bold text-dark mb-1 text-uppercase fs-8 text-muted tracking-wide">Threat Severity</h5>
+            
+            {% set score = analysis.threat_score %}
+            {% if score >= 75 %}
+                {% set badge_class = "danger" %}
+                {% set text_class = "danger" %}
+                {% set severity_desc = "Critical - Immediate action required. Segment network blocks." %}
+            {% elif score >= 50 %}
+                {% set badge_class = "warning" %}
+                {% set text_class = "warning" %}
+                {% set severity_desc = "High - Elevated threats detected. Review audit logs." %}
+            {% elif score >= 25 %}
+                {% set badge_class = "warning" %}
+                {% set text_class = "warning" %}
+                {% set severity_desc = "Medium - Normal variance. Monitor closely." %}
+            {% else %}
+                {% set badge_class = "success" %}
+                {% set text_class = "success" %}
+                {% set severity_desc = "Low - System operating under normal parameters." %}
+            {% endif %}
+
+            <div class="d-inline-flex align-items-center justify-content-center bg-{{ badge_class }}-light rounded-circle mx-auto my-4" style="width: 140px; height: 140px;">
+                <div class="text-center">
+                    <h1 class="fw-bold text-{{ text_class }} mb-0 tracking-tight" style="font-size: 2.5rem;">{{ analysis.threat_score }}</h1>
+                    <div class="text-muted fs-8">score</div>
+                </div>
+            </div>
+
+            <h5 class="fw-bold text-{{ text_class }} text-uppercase mb-2">{{ severity_desc.split(' - ')[0] }}</h5>
+            <p class="text-muted fs-7 mb-0 px-3">{{ severity_desc.split(' - ')[1] }}</p>
+        </div>
+    </div>
+
+    <!-- Anomaly stats details -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+            <h5 class="fw-bold text-dark mb-4">Detection Metrics</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="p-3 bg-light rounded-3 border">
+                        <div class="text-muted fs-8 text-uppercase fw-semibold">Total Audited Traffic</div>
+                        <h4 class="fw-bold mt-1 text-dark mb-0">{{ analysis.total_records }} rows</h4>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 bg-light rounded-3 border">
+                        <div class="text-muted fs-8 text-uppercase fw-semibold">Threats Flagged</div>
+                        <h4 class="fw-bold mt-1 text-danger mb-0">{{ analysis.anomalies_detected }} instances</h4>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 bg-light rounded-3 border">
+                        <div class="text-muted fs-8 text-uppercase fw-semibold">Anomaly rate</div>
+                        <h4 class="fw-bold mt-1 text-dark mb-0">{{ analysis.anomaly_rate }}%</h4>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 bg-light rounded-3 border">
+                        <div class="text-muted fs-8 text-uppercase fw-semibold">Accuracy rating</div>
+                        <h4 class="fw-bold mt-1 text-success mb-0">{{ (analysis.accuracy * 100) | round(2) }}%</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-3 mt-1">
+                <div class="col-4">
+                    <div class="text-center py-2 border-end">
+                        <div class="text-muted fs-8">Precision</div>
+                        <div class="fw-bold text-dark mt-1">{{ (analysis.precision_score * 100) | round(2) }}%</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="text-center py-2 border-end">
+                        <div class="text-muted fs-8">Recall</div>
+                        <div class="fw-bold text-dark mt-1">{{ (analysis.recall * 100) | round(2) }}%</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="text-center py-2">
+                        <div class="text-muted fs-8">F1-Score</div>
+                        <div class="fw-bold text-dark mt-1">{{ (analysis.f1_score * 100) | round(2) }}%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MSc Feature Additions: Confusion Matrix, ROC Curve, and Attack Distribution -->
+<div class="row g-4 mb-4">
+    <!-- Confusion Matrix -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+            <h5 class="fw-bold text-dark mb-3">Confusion Matrix</h5>
+            <div class="d-flex flex-column h-100 justify-content-center">
+                <div class="row g-2 text-center" id="confusionMatrixContainer">
+                    <!-- Dynamic Matrix Cards -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ROC Curve -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+            <h5 class="fw-bold text-dark mb-3">ROC Curve</h5>
+            <div style="height: 200px; position: relative;">
+                <canvas id="rocChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attack Type Distribution -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+            <h5 class="fw-bold text-dark mb-3">Detected Attack Types</h5>
+            <div class="d-flex flex-column gap-2" id="attackDistributionContainer">
+                <!-- Dynamic Progress Bars -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- SHAP Chart -->
+    <div class="col-md-7">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-dark mb-0">SHAP Feature Importance</h5>
+                <a href="{{ url_for('analysis.shap_detail', analysis_id=analysis.id) }}" class="btn btn-outline-primary btn-xs rounded-pill px-3 py-1 fs-8">
+                    <i class="bi bi-zoom-in me-1"></i> Interactive SHAP Details
+                </a>
+            </div>
+            <div style="height: 350px; position: relative;">
+                <canvas id="shapChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="col-md-5">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+            <h5 class="fw-bold text-dark mb-3">Model Recommendations</h5>
+            <div class="d-flex flex-column gap-3 fs-7" id="recsContainer">
+                <!-- Recommendations will be populated by script -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Parse predictions data safely
+        const predDataRaw = {{ analysis.predictions_data | default('{}') | safe }};
+        let predData = {};
+        try {
+            predData = typeof predDataRaw === 'string' ? JSON.parse(predDataRaw) : predDataRaw;
+        } catch (e) {
+            console.error("Error parsing predictions_data", e);
+        }
+
+        // 1. Confusion Matrix
+        const cm = predData.confusion_matrix || [[0, 0], [0, 0]];
+        const tn = cm[0] && cm[0][0] !== undefined ? cm[0][0] : 0;
+        const fp = cm[0] && cm[0][1] !== undefined ? cm[0][1] : 0;
+        const fn = cm[1] && cm[1][0] !== undefined ? cm[1][0] : 0;
+        const tp = cm[1] && cm[1][1] !== undefined ? cm[1][1] : 0;
+
+        const cmContainer = document.getElementById("confusionMatrixContainer");
+        cmContainer.innerHTML = `
+            <div class="col-6">
+                <div class="p-3 bg-light rounded-3">
+                    <div class="text-muted fs-8 fw-semibold">True Neg (TN)</div>
+                    <h5 class="fw-bold text-success mb-0 mt-1">${tn}</h5>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="p-3 bg-light rounded-3">
+                    <div class="text-muted fs-8 fw-semibold">False Pos (FP)</div>
+                    <h5 class="fw-bold text-danger mb-0 mt-1">${fp}</h5>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="p-3 bg-light rounded-3">
+                    <div class="text-muted fs-8 fw-semibold">False Neg (FN)</div>
+                    <h5 class="fw-bold text-danger mb-0 mt-1">${fn}</h5>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="p-3 bg-light rounded-3">
+                    <div class="text-muted fs-8 fw-semibold">True Pos (TP)</div>
+                    <h5 class="fw-bold text-success mb-0 mt-1">${tp}</h5>
+                </div>
+            </div>
+        `;
+
+        // 2. ROC Curve Chart
+        const roc = predData.roc_curve || { fpr: [0, 1], tpr: [0, 1] };
+        const rocCtx = document.getElementById('rocChart').getContext('2d');
+        
+        let fprPoints = roc.fpr || [0, 1];
+        let tprPoints = roc.tpr || [0, 1];
+        if (fprPoints.length > 50) {
+            const step = Math.ceil(fprPoints.length / 50);
+            fprPoints = fprPoints.filter((_, idx) => idx % step === 0);
+            tprPoints = tprPoints.filter((_, idx) => idx % step === 0);
+            if (fprPoints[fprPoints.length - 1] !== 1.0) {
+                fprPoints.push(1.0);
+                tprPoints.push(1.0);
+            }
+        }
+
+        new Chart(rocCtx, {
+            type: 'line',
+            data: {
+                labels: fprPoints.map(val => val.toFixed(2)),
+                datasets: [
+                    {
+                        label: 'ROC Curve',
+                        data: tprPoints,
+                        borderColor: '#2563eb',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.1,
+                        pointRadius: 1,
+                    },
+                    {
+                        label: 'Random Guess',
+                        data: fprPoints,
+                        borderColor: 'rgba(156, 163, 175, 0.5)',
+                        borderWidth: 1.5,
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 0,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'False Positive Rate', font: { family: 'Inter', size: 9 } },
+                        ticks: { font: { family: 'Inter', size: 9 } }
+                    },
+                    y: {
+                        title: { display: true, text: 'True Positive Rate', font: { family: 'Inter', size: 9 } },
+                        beginAtZero: true,
+                        ticks: { font: { family: 'Inter', size: 9 } }
+                    }
+                }
+            }
+        });
+
+        // 3. Attack Type Distribution
+        const dist = predData.attack_distribution || {};
+        const distContainer = document.getElementById("attackDistributionContainer");
+        const totalCounts = Object.values(dist).reduce((a, b) => a + b, 0);
+        
+        if (Object.keys(dist).length === 0) {
+            distContainer.innerHTML = `<div class="text-muted text-center fs-7 py-3">No attack distribution data available</div>`;
+        } else {
+            const sortedDist = Object.entries(dist).sort((a, b) => b[1] - a[1]);
+            distContainer.innerHTML = sortedDist.map(([attack, count]) => {
+                const percentage = totalCounts > 0 ? ((count / totalCounts) * 100).toFixed(1) : 0;
+                let barColor = 'bg-primary';
+                if (attack === 'Normal' || attack === 'Benign') {
+                    barColor = 'bg-success';
+                } else if (attack === 'DDoS' || attack === 'DoS') {
+                    barColor = 'bg-danger';
+                } else if (attack === 'Port Scan' || attack === 'Brute Force') {
+                    barColor = 'bg-warning';
+                }
+                return `
+                    <div>
+                        <div class="d-flex justify-content-between text-dark fs-8 mb-1">
+                            <span class="fw-semibold">${attack}</span>
+                            <span class="text-muted">${count} (${percentage}%)</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar ${barColor}" role="progressbar" style="width: ${percentage}%" aria-valuenow="${percentage}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 4. Render SHAP Chart
+        const rawImportance = {{ analysis.feature_importance | default('{}') | safe }};
+        let importanceData = {};
+        try {
+            importanceData = typeof rawImportance === 'string' ? JSON.parse(rawImportance) : rawImportance;
+        } catch (e) {
+            importanceData = rawImportance;
+        }
+        const items = Object.entries(importanceData)
+            .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+            .slice(0, 10);
+
+        const ctx = document.getElementById('shapChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: items.map(i => i[0]),
+                datasets: [{
+                    label: 'Mean Absolute SHAP Value (Impact)',
+                    data: items.map(i => Math.abs(i[1])),
+                    backgroundColor: 'rgba(37, 99, 235, 0.7)',
+                    borderColor: '#2563eb',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { font: { family: 'Inter', size: 10 } }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { font: { family: 'Inter', size: 10 } }
+                    }
+                }
+            }
+        });
+
+        // 5. Generate Recommendations dynamically
+        const threatScore = {{ analysis.threat_score }};
+        const recsContainer = document.getElementById("recsContainer");
+        let recs = [];
+
+        if (threatScore >= 75) {
+            recs = [
+                { title: "Critical Threat Alert", text: "Isolate target subnets immediately. Initiate standard incident response guidelines.", type: "danger" },
+                { title: "Firewall Rule Reevaluation", text: "Block connections originating from suspicious hosts detected in prediction logs.", type: "warning" },
+                { title: "Log Auditing", text: "Audit external endpoints and investigate for data exfiltration patterns.", type: "info" }
+            ];
+        } else if (threatScore >= 50) {
+            recs = [
+                { title: "High Alert Review", text: "Investigate anomaly vectors manually and flag host IDs in network systems.", type: "warning" },
+                { title: "Extended Monitoring", text: "Turn on trace logs for suspicious nodes for the next 48 hours.", type: "info" }
+            ];
+        } else {
+            recs = [
+                { title: "Routine Assurance", text: "Normal threshold. Proceed with standard scheduled reports.", type: "success" },
+                { title: "Continuous Integration", text: "Retrain the model weekly with newer datasets to avoid pattern drift.", type: "info" }
+            ];
+        }
+
+        recsContainer.innerHTML = recs.map(r => `
+            <div class="p-3 bg-light rounded-3 border-start border-${r.type} border-3">
+                <div class="fw-bold text-${r.type === 'info' ? 'primary' : r.type} mb-1">${r.title}</div>
+                <div class="text-muted fs-8">${r.text}</div>
+            </div>
+        `).join('');
+    });
+</script>
+{% endblock %}

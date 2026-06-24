@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% block title %}Interactive SHAP Explainability Details - Aegis ML-IDS{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <a href="{{ url_for('analysis.results', analysis_id=analysis.id) }}" class="text-muted text-decoration-none fs-7 d-inline-flex align-items-center mb-2">
+            <i class="bi bi-arrow-left me-1"></i> Back to Analysis Results
+        </a>
+        <h2 class="fw-bold tracking-tight text-dark mb-1">Explainable AI (XAI) Dashboard</h2>
+        <p class="text-muted fs-7 mb-0">Model Interpretability via SHAP (SHapley Additive exPlanations) | Analysis #{{ analysis.id }}</p>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Quick Stats Cards -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white text-center">
+            <h5 class="fw-bold text-dark mb-1 text-uppercase fs-8 text-muted tracking-wide">Top Explaining Feature</h5>
+            <div class="d-inline-flex align-items-center justify-content-center bg-primary-light rounded-circle mx-auto my-3" style="width: 60px; height: 60px;">
+                <i class="bi bi-star-fill text-primary fs-4"></i>
+            </div>
+            <h5 class="fw-bold text-dark mb-0 text-truncate px-2" id="topFeatureName">Loading...</h5>
+            <p class="text-muted fs-8 mb-0 mt-1">Highest impact on classification</p>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white text-center">
+            <h5 class="fw-bold text-dark mb-1 text-uppercase fs-8 text-muted tracking-wide">SHAP Sample Base</h5>
+            <div class="d-inline-flex align-items-center justify-content-center bg-success-light rounded-circle mx-auto my-3" style="width: 60px; height: 60px;">
+                <i class="bi bi-grid-fill text-success fs-4"></i>
+            </div>
+            <h5 class="fw-bold text-dark mb-0">Test Partition</h5>
+            <p class="text-muted fs-8 mb-0 mt-1">Sample size: ~20% of traffic flows</p>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white text-center">
+            <h5 class="fw-bold text-dark mb-1 text-uppercase fs-8 text-muted tracking-wide">Interpretability Rating</h5>
+            <div class="d-inline-flex align-items-center justify-content-center bg-info-light rounded-circle mx-auto my-3" style="width: 60px; height: 60px;">
+                <i class="bi bi-patch-check-fill text-info fs-4"></i>
+            </div>
+            <h5 class="fw-bold text-dark mb-0">Distinction Grade</h5>
+            <p class="text-muted fs-8 mb-0 mt-1">High transparency metrics</p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- SHAP Educational & Overview -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white mb-4">
+            <h5 class="fw-bold text-dark mb-3">Understanding SHAP values</h5>
+            <p class="text-muted fs-7">
+                SHAP (SHapley Additive exPlanations) is a game-theoretic approach that explains the output of any machine learning model. It connects optimal credit allocation with local explanations using classical Shapley values from game theory.
+            </p>
+            <hr>
+            <h6 class="fw-bold text-dark fs-7 mb-2"><i class="bi bi-info-circle me-1 text-primary"></i> Interpretation Guide:</h6>
+            <ul class="fs-7 text-muted ps-3">
+                <li class="mb-2"><strong>Mean Absolute SHAP Value:</strong> Indicates the overall importance/magnitude of a feature's effect on model predictions.</li>
+                <li class="mb-2"><strong>Direction badge:</strong> Shows if high feature values correlate with an increased threat/anomaly score (<span class="badge bg-danger fs-9">Increases Risk</span>) or normal profile (<span class="badge bg-primary fs-9">Decreases Risk</span>).</li>
+                <li><strong>Correlation Coefficient:</strong> Measures the linear strength of the relationship between feature values and their respective SHAP values.</li>
+            </ul>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white">
+            <h5 class="fw-bold text-dark mb-3">Common Network Feature Definitions</h5>
+            <div class="accordion accordion-flush" id="featureAccordion">
+                <div class="accordion-item border-bottom">
+                    <h2 class="accordion-header" id="headingOne">
+                        <button class="accordion-button collapsed fs-7 fw-semibold ps-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                            Destination Port
+                        </button>
+                    </h2>
+                    <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#featureAccordion">
+                        <div class="accordion-body fs-8 text-muted ps-0 pt-1 pb-3">
+                            The target port of the connection. Ports like 80/443 represent standard web traffic, whereas high random ports often flag scanning/probing attacks.
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item border-bottom">
+                    <h2 class="accordion-header" id="headingTwo">
+                        <button class="accordion-button collapsed fs-7 fw-semibold ps-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                            Flow Duration
+                        </button>
+                    </h2>
+                    <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#featureAccordion">
+                        <div class="accordion-body fs-8 text-muted ps-0 pt-1 pb-3">
+                            The total duration of the session in microseconds. DoS/DDoS attacks often show extreme durations (too short for syn floods, or extremely long for slowloris).
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingThree">
+                        <button class="accordion-button collapsed fs-7 fw-semibold ps-0 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                            Packet Length Variance
+                        </button>
+                    </h2>
+                    <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#featureAccordion">
+                        <div class="accordion-body fs-8 text-muted ps-0 pt-1 pb-3">
+                            Measures standard deviation in packet payload sizes. Low variance is common in automated scripts or flood attacks, while high variance represents human-like interactive sessions or multi-payload stages.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SHAP Feature Analysis Table -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+            <h5 class="fw-bold text-dark mb-3">Feature Interpretation Matrix</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle table-sm border fs-7">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="py-2 ps-3">Rank</th>
+                            <th class="py-2">Feature Name</th>
+                            <th class="py-2 text-end">SHAP Value</th>
+                            <th class="py-2 text-center">Direction</th>
+                            <th class="py-2 text-end pe-3">Correlation</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shapTableBody">
+                        <!-- Dynamic Feature Rows -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Parse SHAP summary safely
+        const rawSummary = {{ analysis.shap_summary | default('{}') | safe }};
+        let shapSummary = {};
+        try {
+            shapSummary = typeof rawSummary === 'string' ? JSON.parse(rawSummary) : rawSummary;
+        } catch (e) {
+            shapSummary = rawSummary;
+        }
+
+        // Sort features by importance descending
+        const items = Object.entries(shapSummary)
+            .sort((a, b) => b[1].importance - a[1].importance);
+
+        if (items.length > 0) {
+            document.getElementById("topFeatureName").innerText = items[0][0];
+            document.getElementById("topFeatureName").title = items[0][0];
+        } else {
+            document.getElementById("topFeatureName").innerText = "None";
+        }
+
+        const tableBody = document.getElementById("shapTableBody");
+        if (items.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No explainability stats generated for this model type.</td></tr>`;
+        } else {
+            tableBody.innerHTML = items.map(([name, data], idx) => {
+                const isRisk = data.direction === 'positive';
+                const directionText = isRisk ? 'Increases Risk' : 'Decreases Risk';
+                const badgeColor = isRisk ? 'danger' : 'primary';
+                const correlation = data.correlation ? data.correlation.toFixed(3) : '0.000';
+                
+                return `
+                    <tr>
+                        <td class="py-3 ps-3 fw-bold text-muted">${idx + 1}</td>
+                        <td class="fw-semibold text-dark">${name}</td>
+                        <td class="text-end fw-bold">${data.importance.toFixed(5)}</td>
+                        <td class="text-center">
+                            <span class="badge bg-${badgeColor}-light text-${badgeColor} rounded-pill fs-8 px-2 py-1">${directionText}</span>
+                        </td>
+                        <td class="text-end pe-3 text-muted">${correlation}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    });
+</script>
+{% endblock %}

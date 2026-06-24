@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}Reports - Aegis ML-IDS{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col-md-6">
+        <h2 class="fw-bold tracking-tight text-dark mb-1">Generated Reports</h2>
+        <p class="text-muted fs-7 mb-0">Download executive and full-scale PDF threat assessment reports.</p>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3 bg-white p-4">
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Report ID</th>
+                    <th>Linked Analysis</th>
+                    <th>Report Type</th>
+                    <th>Filename</th>
+                    <th>Generated At</th>
+                    <th class="text-end">Download</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if pagination.items %}
+                    {% for report in pagination.items %}
+                        <tr>
+                            <td class="fw-semibold text-dark">#{{ report.id }}</td>
+                            <td>
+                                <a href="{{ url_for('analysis.results', analysis_id=report.analysis_id) }}" class="text-decoration-none fw-semibold">
+                                    Analysis #{{ report.analysis_id }}
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border text-uppercase fs-8">{{ report.report_type }}</span>
+                            </td>
+                            <td class="text-muted fs-8">{{ report.filename }}</td>
+                            <td class="text-muted fs-8">{{ report.generated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td class="text-end">
+                                <a href="{{ url_for('reports.download', report_id=report.id) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1 fs-8">
+                                    <i class="bi bi-download me-1"></i> PDF
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-file-earmark-pdf fs-1 mb-2"></i>
+                            <p class="fs-7 mb-0">No reports generated yet.</p>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination controls -->
+    {% if pagination.pages > 1 %}
+    <nav class="d-flex justify-content-between align-items-center mt-4">
+        <div class="text-muted fs-8">
+            Showing Page {{ pagination.page }} of {{ pagination.pages }} ({{ pagination.total }} total items)
+        </div>
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('reports.list_view', page=pagination.prev_num) }}">Previous</a>
+            </li>
+            {% for page_num in pagination.iter_pages() %}
+                {% if page_num %}
+                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('reports.list_view', page=page_num) }}">{{ page_num }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('reports.list_view', page=pagination.next_num) }}">Next</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

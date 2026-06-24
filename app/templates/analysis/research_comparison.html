@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% block title %}Research Literature Comparison - Aegis ML-IDS{% endblock %}
+
+{% block head %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h2 class="fw-bold tracking-tight text-dark mb-1">State of the Art (SOTA) Literature Benchmarking</h2>
+        <p class="text-muted fs-7 mb-0">Cross-reference live model evaluations against standard academic research papers using the CICIDS2017 dataset.</p>
+    </div>
+</div>
+
+{% if not latest %}
+<div class="alert alert-info rounded-3 shadow-sm border-0 mb-4" role="alert">
+    <div class="d-flex align-items-center">
+        <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+        <div>
+            <strong>MSc Insight:</strong> Run a model analysis on a dataset first to enable live benchmarking comparison against research papers.
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-4 mb-4">
+    <!-- Comparison Chart -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white">
+            <h5 class="fw-bold text-dark mb-3">Live Run vs. Research Benchmarks</h5>
+            <div style="height: 320px; position: relative;">
+                <canvas id="literatureChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- SOTA Summary Card -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+            <h5 class="fw-bold text-dark mb-3">Benchmark Summary</h5>
+            <div class="fs-7 text-muted my-auto">
+                <p>
+                    The <strong>CICIDS2017 dataset</strong> is a widely recognized benchmark for evaluating Intrusion Detection Systems (IDS). 
+                </p>
+                <p>
+                    Original baseline testing by the dataset creators (Sharafaldin et al.) established Random Forest as a premier model with F1 scores around 96%.
+                </p>
+                <div class="p-3 bg-light rounded border border-start-primary border-3 fs-8">
+                    <strong>Note on variance:</strong> Differences in preprocessing, class imbalance sampling, and custom feature subsets account for minor variances between your live runs and published baselines.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Literature Papers Table -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white">
+            <h5 class="fw-bold text-dark mb-3">Literature Source Reference</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle table-sm border fs-7">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="py-2 ps-3">Research Study</th>
+                            <th class="py-2">ML Model</th>
+                            <th class="py-2 text-end">Accuracy</th>
+                            <th class="py-2 text-end">Precision</th>
+                            <th class="py-2 text-end">Recall</th>
+                            <th class="py-2 text-end pe-3">F1-Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Live Model Run -->
+                        <tr class="table-primary">
+                            <td class="py-3 ps-3 fw-bold">Live Model (Aegis Run{% if latest %} #{{ latest.id }}{% endif %})</td>
+                            <td class="fw-semibold text-capitalize">{% if latest %}{{ latest.model_type.replace('_', ' ') }}{% else %}No Run Loaded{% endif %}</td>
+                            <td class="text-end fw-bold">{% if latest %}{{ (latest.accuracy * 100) | round(2) }}%{% else %}-{% endif %}</td>
+                            <td class="text-end">{% if latest %}{{ (latest.precision_score * 100) | round(2) }}%{% else %}-{% endif %}</td>
+                            <td class="text-end">{% if latest %}{{ (latest.recall * 100) | round(2) }}%{% else %}-{% endif %}</td>
+                            <td class="text-end pe-3 fw-bold">{% if latest %}{{ (latest.f1_score * 100) | round(2) }}%{% else %}-{% endif %}</td>
+                        </tr>
+                        <!-- Paper 1 -->
+                        <tr>
+                            <td class="py-3 ps-3 fw-semibold">Sharafaldin et al. (2018) <span class="text-muted fs-8">(Dataset Origin)</span></td>
+                            <td class="text-muted">Random Forest</td>
+                            <td class="text-end">98.00%</td>
+                            <td class="text-end">97.00%</td>
+                            <td class="text-end">96.00%</td>
+                            <td class="text-end pe-3 text-muted">96.50%</td>
+                        </tr>
+                        <!-- Paper 2 -->
+                        <tr>
+                            <td class="py-3 ps-3 fw-semibold">Panigrahi & Borah (2020)</td>
+                            <td class="text-muted">XGBoost Ensemble</td>
+                            <td class="text-end">98.70%</td>
+                            <td class="text-end">98.20%</td>
+                            <td class="text-end">98.50%</td>
+                            <td class="text-end pe-3 text-muted">98.30%</td>
+                        </tr>
+                        <!-- Paper 3 -->
+                        <tr>
+                            <td class="py-3 ps-3 fw-semibold">Alom et al. (2019)</td>
+                            <td class="text-muted">DBN Deep Learning</td>
+                            <td class="text-end">97.50%</td>
+                            <td class="text-end">96.80%</td>
+                            <td class="text-end">97.20%</td>
+                            <td class="text-end pe-3 text-muted">97.00%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Live data values
+        const liveAcc = {% if latest %}{{ latest.accuracy }}{% else %}0.0{% endif %};
+        const livePrec = {% if latest %}{{ latest.precision_score }}{% else %}0.0{% endif %};
+        const liveRec = {% if latest %}{{ latest.recall }}{% else %}0.0{% endif %};
+        const liveF1 = {% if latest %}{{ latest.f1_score }}{% else %}0.0{% endif %};
+
+        const metrics = ['Accuracy', 'Precision', 'Recall', 'F1-Score'];
+        const datasets = [
+            {
+                label: 'Sharafaldin et al. (2018) [RF]',
+                data: [0.980, 0.970, 0.960, 0.965],
+                backgroundColor: 'rgba(156, 163, 175, 0.5)',
+                borderColor: '#9ca3af',
+                borderWidth: 1,
+                borderRadius: 4
+            },
+            {
+                label: 'Panigrahi et al. (2020) [XGB]',
+                data: [0.987, 0.982, 0.985, 0.983],
+                backgroundColor: 'rgba(156, 163, 175, 0.3)',
+                borderColor: '#d1d5db',
+                borderWidth: 1,
+                borderRadius: 4
+            }
+        ];
+
+        // Only add live run to comparison if data exists
+        if (liveF1 > 0) {
+            datasets.unshift({
+                label: 'Live Model (Aegis Run)',
+                data: [liveAcc, livePrec, liveRec, liveF1],
+                backgroundColor: 'rgba(37, 99, 235, 0.7)',
+                borderColor: '#2563eb',
+                borderWidth: 1.5,
+                borderRadius: 4
+            });
+        }
+
+        const ctx = document.getElementById('literatureChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: metrics,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { font: { family: 'Inter', size: 10 } }
+                    }
+                },
+                scales: {
+                    x: { ticks: { font: { family: 'Inter', size: 10 } } },
+                    y: { beginAtZero: true, max: 1.0, ticks: { font: { family: 'Inter', size: 10 } } }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

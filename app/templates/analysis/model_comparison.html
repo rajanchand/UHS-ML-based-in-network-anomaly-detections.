@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% block title %}Model Comparison Dashboard - Aegis ML-IDS{% endblock %}
+
+{% block head %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h2 class="fw-bold tracking-tight text-dark mb-1">Model Performance Benchmarks</h2>
+        <p class="text-muted fs-7 mb-0">Compare model accuracy, precision, recall, and detection latency across historic analyses.</p>
+    </div>
+</div>
+
+{% if analyses | length < 2 %}
+<div class="alert alert-info rounded-3 shadow-sm border-0 mb-4" role="alert">
+    <div class="d-flex align-items-center">
+        <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+        <div>
+            <strong>MSc Insight:</strong> To view dynamic comparison charts, please run analyses on multiple models first (e.g. Random Forest and Isolation Forest).
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-4 mb-4">
+    <!-- Comparison Chart -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white">
+            <h5 class="fw-bold text-dark mb-3">Metric Breakdown Side-by-Side</h5>
+            <div style="height: 320px; position: relative;">
+                <canvas id="comparisonChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Analysis Summary Card -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+            <h5 class="fw-bold text-dark mb-3">Champion Model</h5>
+            <div class="text-center my-auto py-3">
+                <div class="d-inline-flex align-items-center justify-content-center bg-success-light rounded-circle mb-3" style="width: 70px; height: 70px;">
+                    <i class="bi bi-trophy text-success fs-3"></i>
+                </div>
+                <h4 class="fw-bold text-dark mb-1" id="championModel">Evaluating...</h4>
+                <p class="text-muted fs-8 mb-3" id="championReason">F1-Score benchmark lead</p>
+                <div class="border rounded p-3 bg-light text-start fs-7">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Accuracy:</span>
+                        <span class="fw-bold text-dark" id="champAcc">-</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">F1 Score:</span>
+                        <span class="fw-bold text-dark" id="champF1">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Historic Runs Table -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white">
+            <h5 class="fw-bold text-dark mb-3">Model Analysis Logs</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle table-sm border fs-7">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="py-2 ps-3">ID</th>
+                            <th class="py-2">Run Timestamp</th>
+                            <th class="py-2">Model Type</th>
+                            <th class="py-2 text-end">Accuracy</th>
+                            <th class="py-2 text-end">Precision</th>
+                            <th class="py-2 text-end">Recall</th>
+                            <th class="py-2 text-end">F1-Score</th>
+                            <th class="py-2 text-end">ROC-AUC</th>
+                            <th class="py-2 text-center">Threats Flagged</th>
+                            <th class="py-2 text-center pe-3">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in analyses %}
+                        <tr>
+                            <td class="py-3 ps-3 fw-bold text-muted">#{{ a.id }}</td>
+                            <td class="text-muted">{{ a.completed_at.strftime('%Y-%m-%d %H:%M') if a.completed_at else '' }}</td>
+                            <td class="fw-semibold text-dark text-capitalize">{{ a.model_type.replace('_', ' ') }}</td>
+                            <td class="text-end fw-bold">{{ (a.accuracy * 100) | round(2) }}%</td>
+                            <td class="text-end text-muted">{{ (a.precision_score * 100) | round(2) }}%</td>
+                            <td class="text-end text-muted">{{ (a.recall * 100) | round(2) }}%</td>
+                            <td class="text-end text-dark fw-semibold">{{ (a.f1_score * 100) | round(2) }}%</td>
+                            <td class="text-end text-muted">{{ (a.roc_auc * 100) | round(2) }}%</td>
+                            <td class="text-center">
+                                <span class="badge badge-threat-{{ 'high' if a.anomalies_detected > 0 else 'low' }} rounded-pill">
+                                    {{ a.anomalies_detected }}
+                                </span>
+                            </td>
+                            <td class="text-center pe-3">
+                                <a href="{{ url_for('analysis.results', analysis_id=a.id) }}" class="btn btn-outline-primary btn-xs rounded-pill px-3 py-1">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Collect model logs from templates jinja parameters
+        const list = [
+            {% for a in analyses %}
+            {
+                id: {{ a.id }},
+                model: "{{ a.model_type }}",
+                accuracy: {{ a.accuracy }},
+                precision: {{ a.precision_score }},
+                recall: {{ a.recall }},
+                f1: {{ a.f1_score }},
+                auc: {{ a.roc_auc }}
+            },
+            {% endfor %}
+        ];
+
+        // Get latest run for each distinct model type
+        const latestModels = {};
+        list.forEach(item => {
+            if (!latestModels[item.model] || latestModels[item.model].id < item.id) {
+                latestModels[item.model] = item;
+            }
+        });
+
+        // Set Champion Model
+        let bestF1 = 0;
+        let champion = null;
+        Object.values(latestModels).forEach(item => {
+            if (item.f1 > bestF1) {
+                bestF1 = item.f1;
+                champion = item;
+            }
+        });
+
+        if (champion) {
+            const formatName = champion.model.replace('_', ' ').toUpperCase();
+            document.getElementById("championModel").innerText = formatName;
+            document.getElementById("champAcc").innerText = (champion.accuracy * 100).toFixed(2) + "%";
+            document.getElementById("champF1").innerText = (champion.f1 * 100).toFixed(2) + "%";
+            document.getElementById("championReason").innerText = `Model run #${champion.id} scored top F1 metrics.`;
+        } else {
+            document.getElementById("championModel").innerText = "No Runs Detected";
+        }
+
+        // Render Bar Chart Comparing distinct models
+        const labels = ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'ROC-AUC'];
+        const datasets = [];
+        const colors = {
+            'random_forest': { fill: 'rgba(37, 99, 235, 0.7)', border: '#2563eb' },
+            'xgboost': { fill: 'rgba(16, 185, 129, 0.7)', border: '#10b981' },
+            'isolation_forest': { fill: 'rgba(245, 158, 11, 0.7)', border: '#f59e0b' }
+        };
+
+        Object.entries(latestModels).forEach(([model, item]) => {
+            const color = colors[model] || { fill: 'rgba(107, 114, 128, 0.7)', border: '#6b7280' };
+            const modelName = model.replace('_', ' ').toUpperCase();
+            
+            datasets.push({
+                label: modelName + ` (#${item.id})`,
+                data: [item.accuracy, item.precision, item.recall, item.f1, item.auc],
+                backgroundColor: color.fill,
+                borderColor: color.border,
+                borderWidth: 1,
+                borderRadius: 4
+            });
+        });
+
+        const ctx = document.getElementById('comparisonChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { font: { family: 'Inter', size: 10 } }
+                    }
+                },
+                scales: {
+                    x: { ticks: { font: { family: 'Inter', size: 10 } } },
+                    y: { beginAtZero: true, max: 1.0, ticks: { font: { family: 'Inter', size: 10 } } }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,200 @@
+/* 
+=============================================================================
+Aegis ML-IDS Style System
+=============================================================================
+Premium light theme with soft glassmorphic panels, deep Navy & Royal Blue accents,
+refined typography, micro-interactions, and mobile-first layouts.
+*/
+
+:root {
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --primary-light: #eff6ff;
+    --success: #10b981;
+    --success-light: #ecfdf5;
+    --warning: #f59e0b;
+    --warning-light: #fef3c7;
+    --danger: #ef4444;
+    --danger-light: #fef2f2;
+    --dark: #0f172a;
+    --light: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-600: #475569;
+    --body-bg: #f8fafc;
+    --card-bg: #ffffff;
+    --border-color: #e2e8f0;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+    
+    /* Transitions */
+    --transition-fast: all 0.15s ease-in-out;
+    --transition-normal: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Base resets & global styles */
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--body-bg);
+    color: var(--dark);
+    line-height: 1.6;
+    letter-spacing: -0.011em;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: var(--gray-100);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-600);
+}
+
+/* Typography settings */
+.tracking-tight {
+    letter-spacing: -0.025em;
+}
+.fs-7 {
+    font-size: 0.875rem;
+}
+.fs-8 {
+    font-size: 0.75rem;
+}
+
+/* Glassmorphism elements */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+}
+
+/* Dashboard Cards & Layout */
+.card-kpi {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    transition: var(--transition-normal);
+    background-color: var(--card-bg);
+}
+.card-kpi:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary);
+}
+
+.kpi-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    font-size: 1.25rem;
+}
+
+/* Buttons custom override */
+.btn {
+    font-weight: 500;
+    transition: var(--transition-fast);
+}
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
+}
+
+/* Table styling */
+.table-responsive {
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+.table {
+    margin-bottom: 0;
+}
+.table th {
+    background-color: var(--gray-100);
+    color: var(--gray-600);
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+.table td {
+    padding: 14px 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Drag & Drop Upload Zone */
+.upload-zone {
+    border: 2px dashed var(--gray-300);
+    border-radius: 12px;
+    background-color: var(--gray-100);
+    transition: var(--transition-normal);
+    cursor: pointer;
+}
+.upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--primary);
+    background-color: var(--primary-light);
+}
+
+/* Badge variants */
+.badge-threat-low {
+    background-color: var(--success-light);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+.badge-threat-medium {
+    background-color: var(--warning-light);
+    color: var(--warning);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+.badge-threat-high {
+    background-color: #fff7ed;
+    color: #ea580c;
+    border: 1px solid rgba(234, 88, 12, 0.2);
+}
+.badge-threat-critical {
+    background-color: var(--danger-light);
+    color: var(--danger);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Auth Cards */
+.auth-card {
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
+    background-color: var(--card-bg);
+}
+
+/* Telemetry list */
+.telemetry-item {
+    border-left: 3px solid transparent;
+    transition: var(--transition-fast);
+}
+.telemetry-item:hover {
+    background-color: var(--gray-100);
+}
+.telemetry-item.low { border-left-color: var(--success); }
+.telemetry-item.medium { border-left-color: var(--warning); }
+.telemetry-item.high { border-left-color: #ea580c; }
+.telemetry-item.critical { border-left-color: var(--danger); }

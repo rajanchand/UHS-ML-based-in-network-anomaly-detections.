@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% block title %}Datasets - Aegis ML-IDS{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col-md-6">
+        <h2 class="fw-bold tracking-tight text-dark mb-1">Managed Datasets</h2>
+        <p class="text-muted fs-7 mb-0">Upload and validate raw network traffic datasets for analysis.</p>
+    </div>
+    <div class="col-md-6 text-md-end mt-3 mt-md-0">
+        <a href="{{ url_for('datasets.upload') }}" class="btn btn-primary rounded-pill px-3 py-2 fs-7">
+            <i class="bi bi-cloud-upload me-1"></i> Upload New Dataset
+        </a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3 bg-white p-4">
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Filename</th>
+                    <th>SHA-256 Hash</th>
+                    <th>Row Count</th>
+                    <th>Col Count</th>
+                    <th>Status</th>
+                    <th>Uploaded</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if pagination.items %}
+                    {% for dataset in pagination.items %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold text-dark">{{ dataset.original_filename }}</div>
+                                <div class="text-muted fs-8">{{ (dataset.file_size / 1024) | round(1) }} KB</div>
+                            </td>
+                            <td>
+                                <code class="text-muted fs-8" title="{{ dataset.file_hash }}">{{ dataset.file_hash[:16] }}...</code>
+                            </td>
+                            <td>{{ dataset.row_count | numberFormat }}</td>
+                            <td>{{ dataset.column_count }}</td>
+                            <td>
+                                {% if dataset.status == 'validated' %}
+                                    <span class="badge badge-threat-low"><i class="bi bi-check-circle-fill me-1"></i> Validated</span>
+                                {% elif dataset.status == 'invalid' %}
+                                    <span class="badge badge-threat-critical"><i class="bi bi-x-circle-fill me-1"></i> Invalid</span>
+                                {% else %}
+                                    <span class="badge bg-light text-muted border"><i class="bi bi-hourglass me-1"></i> {{ dataset.status | capitalize }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted fs-8">{{ dataset.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-2">
+                                    <a href="{{ url_for('datasets.detail', dataset_id=dataset.id) }}" class="btn btn-light btn-sm text-dark px-2 rounded-2 fs-8" title="View dataset details">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                    {% if current_user.has_role('admin', 'analyst') %}
+                                        <form method="POST" action="{{ url_for('datasets.delete', dataset_id=dataset.id) }}" onsubmit="return confirm('Are you sure you want to delete this dataset? The action is permanent.');" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm px-2 rounded-2 fs-8" title="Delete dataset">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-folder-x fs-1 mb-2"></i>
+                            <p class="fs-7 mb-0">No datasets uploaded yet.</p>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination controls -->
+    {% if pagination.pages > 1 %}
+    <nav class="d-flex justify-content-between align-items-center mt-4">
+        <div class="text-muted fs-8">
+            Showing Page {{ pagination.page }} of {{ pagination.pages }} ({{ pagination.total }} total items)
+        </div>
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('datasets.list_view', page=pagination.prev_num) }}">Previous</a>
+            </li>
+            {% for page_num in pagination.iter_pages() %}
+                {% if page_num %}
+                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('datasets.list_view', page=page_num) }}">{{ page_num }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('datasets.list_view', page=pagination.next_num) }}">Next</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

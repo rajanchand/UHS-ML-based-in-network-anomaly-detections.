@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}Dataset Detail - Aegis ML-IDS{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <a href="{{ url_for('datasets.list_view') }}" class="text-muted text-decoration-none fs-7 d-inline-flex align-items-center mb-2">
+            <i class="bi bi-arrow-left me-1"></i> Back to Managed Datasets
+        </a>
+        <h2 class="fw-bold tracking-tight text-dark mb-1">{{ dataset.original_filename }}</h2>
+        <p class="text-muted fs-7 mb-0">Hash: <code class="bg-light px-1 py-0.5 rounded fs-8 text-dark">{{ dataset.file_hash }}</code></p>
+    </div>
+    <div class="col-md-4 text-md-end mt-3 mt-md-0 d-flex gap-2 justify-content-md-end">
+        <a href="{{ url_for('datasets.traffic_analysis', dataset_id=dataset.id) }}" class="btn btn-outline-primary rounded-pill px-3 py-2 fs-7">
+            <i class="bi bi-bar-chart-line me-1"></i> Traffic Analysis
+        </a>
+        <a href="{{ url_for('analysis.run') }}" class="btn btn-primary rounded-pill px-3 py-2 fs-7">
+            <i class="bi bi-play-circle me-1"></i> Run Analysis on this Data
+        </a>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Meta Summary -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+            <h5 class="fw-bold text-dark mb-3">File Summary</h5>
+            <table class="table table-borderless fs-7 mb-0">
+                <tbody>
+                    <tr>
+                        <td class="text-muted ps-0">Rows</td>
+                        <td class="fw-semibold text-dark text-end">{{ dataset.row_count }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted ps-0">Columns</td>
+                        <td class="fw-semibold text-dark text-end">{{ dataset.column_count }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted ps-0">File Size</td>
+                        <td class="fw-semibold text-dark text-end">{{ (dataset.file_size / 1024) | round(1) }} KB</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted ps-0">Status</td>
+                        <td class="text-end">
+                            <span class="badge badge-threat-low"><i class="bi bi-check-circle-fill me-1"></i> Validated</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted ps-0">Uploaded At</td>
+                        <td class="fw-semibold text-dark text-end fs-8">{{ dataset.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Preview Table -->
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+            <h5 class="fw-bold text-dark mb-3">Preview (Top Rows)</h5>
+            {% if preview %}
+                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                    <table class="table table-hover align-middle table-sm border fs-8">
+                        <thead>
+                            <tr>
+                                {% for header in preview.headers %}
+                                    <th class="py-2">{{ header }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in preview.rows %}
+                                <tr>
+                                    {% for val in row %}
+                                        <td>{{ val }}</td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5 text-muted fs-7">
+                    <i class="bi bi-file-earmark-x fs-2 mb-2"></i>
+                    <p class="mb-0">No preview rows available.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,257 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard - Aegis ML-IDS{% endblock %}
+
+{% block head %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col-md-6">
+        <h2 class="fw-bold tracking-tight text-dark mb-1">Security Dashboard</h2>
+        <p class="text-muted fs-7 mb-0">System status, security metrics, and ML analysis pipelines.</p>
+    </div>
+    <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex gap-2 justify-content-md-end">
+        <a href="{{ url_for('datasets.upload') }}" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-2 fs-7">
+            <i class="bi bi-cloud-upload me-1"></i> Upload Dataset
+        </a>
+        <a href="{{ url_for('analysis.run') }}" class="btn btn-primary btn-sm rounded-pill px-3 py-2 fs-7">
+            <i class="bi bi-play-circle me-1"></i> Run Analysis
+        </a>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <!-- Datasets Card -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-kpi border-0 shadow-sm h-100 p-3">
+            <div class="d-flex align-items-center">
+                <div class="kpi-icon bg-primary-light text-primary me-3">
+                    <i class="bi bi-database"></i>
+                </div>
+                <div>
+                    <div class="text-muted fs-8 fw-semibold text-uppercase">Total Datasets</div>
+                    <h3 class="fw-bold mb-0 mt-1">{{ stats.total_datasets }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Analyses Card -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-kpi border-0 shadow-sm h-100 p-3">
+            <div class="d-flex align-items-center">
+                <div class="kpi-icon bg-primary-light text-primary me-3">
+                    <i class="bi bi-cpu"></i>
+                </div>
+                <div>
+                    <div class="text-muted fs-8 fw-semibold text-uppercase">Analyses Executed</div>
+                    <h3 class="fw-bold mb-0 mt-1">{{ stats.total_analyses }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Threats Detected -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-kpi border-0 shadow-sm h-100 p-3">
+            <div class="d-flex align-items-center">
+                <div class="kpi-icon bg-danger-light text-danger me-3">
+                    <i class="bi bi-shield-slash"></i>
+                </div>
+                <div>
+                    <div class="text-muted fs-8 fw-semibold text-uppercase">Threats Flagged</div>
+                    <h3 class="fw-bold mb-0 mt-1 text-danger">{{ stats.total_anomalies }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Avg Threat Score -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="card card-kpi border-0 shadow-sm h-100 p-3">
+            <div class="d-flex align-items-center">
+                {% set score = stats.avg_threat_score %}
+                {% if score >= 75 %}
+                    {% set badge_class = "danger" %}
+                {% elif score >= 50 %}
+                    {% set badge_class = "warning" %}
+                {% else %}
+                    {% set badge_class = "success" %}
+                {% endif %}
+                <div class="kpi-icon bg-{{ badge_class }}-light text-{{ badge_class }} me-3">
+                    <i class="bi bi-activity"></i>
+                </div>
+                <div>
+                    <div class="text-muted fs-8 fw-semibold text-uppercase">Avg Threat Score</div>
+                    <h3 class="fw-bold mb-0 mt-1 text-{{ badge_class }}">{{ stats.avg_threat_score }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Chart Panel -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+            <h5 class="fw-bold text-dark mb-3">Threat Score History</h5>
+            <div style="height: 320px; position: relative;">
+                {% if stats.trend_data %}
+                    <canvas id="threatTrendChart"></canvas>
+                {% else %}
+                    <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
+                        <i class="bi bi-graph-up fs-1 mb-2"></i>
+                        <p class="fs-7">No analysis history available to show charts.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+            <h5 class="fw-bold text-dark mb-3">Recent Security Activity</h5>
+            <div class="d-flex flex-column gap-3 overflow-y-auto" style="max-height: 320px;" id="activityLog">
+                <div class="text-center py-5 text-muted">
+                    <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                    <div class="fs-8">Loading logs...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Load and render Chart.js trend chart
+    {% if stats.trend_data %}
+    const trendData = {{ stats.trend_data | tojson }};
+    const ctx = document.getElementById('threatTrendChart').getContext('2d');
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: trendData.map(d => d.date),
+            datasets: [
+                {
+                    label: 'Threat Score',
+                    data: trendData.map(d => d.threat_score),
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.05)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Anomalies',
+                    data: trendData.map(d => d.anomalies),
+                    borderColor: '#ef4444',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    fill: false,
+                    tension: 0.3,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        boxWidth: 12,
+                        font: { family: 'Inter', size: 11 }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { family: 'Inter', size: 10 } }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    min: 0,
+                    max: 100,
+                    title: { display: true, text: 'Threat Score', font: { family: 'Inter', size: 10 } },
+                    ticks: { font: { family: 'Inter', size: 10 } }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    grid: { drawOnChartArea: false },
+                    title: { display: true, text: 'Anomalies Count', font: { family: 'Inter', size: 10 } },
+                    ticks: { font: { family: 'Inter', size: 10 } }
+                }
+            }
+        }
+    });
+    {% endif %}
+
+    // HTML Escaping helper to prevent XSS
+    function escapeHTML(str) {
+        if (!str) return "";
+        return String(str).replace(/[&<>'"]/g, 
+            tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag] || tag)
+        );
+    }
+
+    // Async Fetch Activity Log
+    document.addEventListener("DOMContentLoaded", () => {
+        fetch('/api/dashboard/recent-activity')
+            .then(res => {
+                if (!res.ok) throw new Error("Failed to load logs");
+                return res.json();
+            })
+            .then(logs => {
+                const activityLog = document.getElementById('activityLog');
+                if (logs.length === 0) {
+                    activityLog.innerHTML = '<div class="text-center py-5 text-muted fs-7">No activity logged.</div>';
+                    return;
+                }
+                
+                activityLog.innerHTML = logs.map(log => {
+                    const date = new Date(log.timestamp).toLocaleString();
+                    let badgeColor = 'bg-secondary';
+                    if (log.action.includes('fail') || log.action.includes('delete')) badgeColor = 'bg-danger';
+                    if (log.action.includes('upload') || log.action.includes('run')) badgeColor = 'bg-success';
+                    if (log.action === 'login') badgeColor = 'bg-primary';
+
+                    return `
+                        <div class="p-3 rounded-3 border bg-light telemetry-item position-relative">
+                            <div class="d-flex justify-content-between mb-1 align-items-center">
+                                <span class="badge ${badgeColor} fs-8 text-uppercase">${escapeHTML(log.action)}</span>
+                                <span class="text-muted fs-8">${escapeHTML(date)}</span>
+                            </div>
+                            <div class="fs-7 text-dark fw-medium">${escapeHTML(log.resource)}</div>
+                            <div class="text-muted fs-8 mt-1">${escapeHTML(log.ip_address)} | ${escapeHTML(log.details || '')}</div>
+                        </div>
+                    `;
+                }).join('');
+            })
+            .catch(err => {
+                document.getElementById('activityLog').innerHTML = `
+                    <div class="text-center py-5 text-danger fs-7">
+                        <i class="bi bi-exclamation-triangle fs-3"></i>
+                        <p class="mt-1">Failed to load activity logs.</p>
+                    </div>
+                `;
+            });
+    });
+</script>
+{% endblock %}

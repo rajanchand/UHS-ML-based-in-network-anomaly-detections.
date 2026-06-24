@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block title %}Run Analysis - Aegis ML-IDS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white" id="mainCard">
+            <h4 class="fw-bold text-dark tracking-tight mb-2">Configure ML Threat Detection</h4>
+            <p class="text-muted fs-7 mb-4">Select a validated dataset and choose the classification model to execute.</p>
+
+            <form method="POST" action="{{ url_for('analysis.run') }}" id="runForm">
+                <!-- CSRF Token -->
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <!-- Select Dataset -->
+                <div class="mb-3">
+                    <label for="dataset_id" class="form-label fs-7 fw-semibold text-dark">Dataset to Analyze</label>
+                    <select class="form-select fs-7" id="dataset_id" name="dataset_id" required>
+                        <option value="" disabled selected>-- Select Dataset --</option>
+                        {% for dataset in datasets %}
+                            <option value="{{ dataset.id }}">{{ dataset.original_filename }} ({{ dataset.row_count }} rows)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Select Model Type -->
+                <div class="mb-3">
+                    <label for="model_type" class="form-label fs-7 fw-semibold text-dark">ML Classifier</label>
+                    <select class="form-select fs-7" id="model_type" name="model_type" required>
+                        <option value="random_forest" selected>Random Forest (Supervised Ensemble)</option>
+                        {% if has_xgboost %}
+                            <option value="xgboost">XGBoost (Gradient Boosted Trees)</option>
+                        {% else %}
+                            <option value="xgboost" disabled>XGBoost (Unavailable - Requires libomp)</option>
+                        {% endif %}
+                        <option value="isolation_forest">Isolation Forest (Unsupervised Anomaly)</option>
+                    </select>
+                </div>
+
+                <!-- Target Label Column -->
+                <div class="mb-4" id="targetColumnGroup">
+                    <label for="target_column" class="form-label fs-7 fw-semibold text-dark">Target/Label Column Name</label>
+                    <input type="text" class="form-control fs-7" id="target_column" name="target_column" value="label" placeholder="e.g. label, class, anomaly">
+                    <div class="form-text fs-8 text-muted">The column that contains class labels (e.g. 0 for normal, 1 for attack). Ignored for unsupervised Isolation Forest.</div>
+                </div>
+
+                <!-- Run Button -->
+                <button type="submit" class="btn btn-primary w-100 py-2.5 rounded-3 fs-7" id="runBtn">
+                    <i class="bi bi-play-fill me-1"></i> Start Threat Classification
+                </button>
+            </form>
+        </div>
+
+        <!-- Running Indicator (shown during training) -->
+        <div class="card border-0 shadow-sm rounded-3 p-5 bg-white text-center d-none" id="loadingCard">
+            <div class="py-4">
+                <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h4 class="fw-bold text-dark mt-4 mb-2">Training ML Pipeline...</h4>
+                <p class="text-muted fs-7 mx-auto" style="max-width: 380px;">Preprocessing data, computing model fits, computing SHAP explainability weights, and generating threat scores. This may take up to a minute.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const form = document.getElementById("runForm");
+        const mainCard = document.getElementById("mainCard");
+        const loadingCard = document.getElementById("loadingCard");
+        const modelSelect = document.getElementById("model_type");
+        const targetGroup = document.getElementById("targetColumnGroup");
+
+        // Toggle target label field based on supervised/unsupervised selection
+        modelSelect.addEventListener("change", () => {
+            if (modelSelect.value === 'isolation_forest') {
+                targetGroup.classList.add("d-none");
+            } else {
+                targetGroup.classList.remove("d-none");
+            }
+        });
+
+        // Show running spinner upon submission
+        form.addEventListener("submit", () => {
+            mainCard.classList.add("d-none");
+            loadingCard.classList.remove("d-none");
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,4 @@
+# Aegis ML-IDS Nginx configuration
+FROM nginx:alpine
+COPY docker/nginx.conf /etc/nginx/nginx.conf
+EXPOSE 80

@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}Upload Dataset - Aegis ML-IDS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white">
+            <h4 class="fw-bold text-dark tracking-tight mb-2">Upload Network Traffic Dataset</h4>
+            <p class="text-muted fs-7 mb-4">Please upload a valid CSV file containing traffic records. Maximum file size is 16MB.</p>
+
+            <form method="POST" action="{{ url_for('datasets.upload') }}" enctype="multipart/form-data" id="uploadForm">
+                <!-- CSRF Token -->
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <!-- Drag & Drop Uploader -->
+                <div class="upload-zone text-center p-5 mb-4 position-relative" id="dropzone">
+                    <input type="file" name="file" id="fileInput" class="position-absolute top-0 start-0 w-100 h-100 opacity-0 cursor-pointer" accept=".csv" required>
+                    <div class="upload-instruction">
+                        <div class="d-inline-flex bg-primary-light text-primary rounded-circle p-3 mb-3">
+                            <i class="bi bi-cloud-arrow-up-fill fs-3"></i>
+                        </div>
+                        <h5 class="fw-semibold text-dark mb-1">Drag and drop file here</h5>
+                        <p class="text-muted fs-7 mb-0">or click to browse from files</p>
+                        <span class="badge bg-light text-muted border mt-3 px-2 py-1 fs-8">CSV format only</span>
+                    </div>
+                    <div class="selected-file-info d-none">
+                        <div class="d-inline-flex bg-success-light text-success rounded-circle p-3 mb-3">
+                            <i class="bi bi-file-earmark-check-fill fs-3"></i>
+                        </div>
+                        <h5 class="fw-semibold text-dark mb-1" id="selectedFilename">filename.csv</h5>
+                        <p class="text-muted fs-7 mb-0" id="selectedFilesize">0 KB</p>
+                        <button type="button" class="btn btn-link btn-sm text-danger text-decoration-none mt-2 fs-8" id="removeFileBtn">
+                            <i class="bi bi-x-circle me-1"></i> Remove file
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn btn-primary w-100 py-2.5 rounded-3 fs-7" id="submitBtn">
+                    <i class="bi bi-shield-check me-1"></i> Upload and Validate
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const dropzone = document.getElementById("dropzone");
+        const fileInput = document.getElementById("fileInput");
+        const instruction = document.querySelector(".upload-instruction");
+        const fileInfo = document.querySelector(".selected-file-info");
+        const filenameLabel = document.getElementById("selectedFilename");
+        const filesizeLabel = document.getElementById("selectedFilesize");
+        const removeBtn = document.getElementById("removeFileBtn");
+
+        // Highlights drag events
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, () => dropzone.classList.add('dragover'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, () => dropzone.classList.remove('dragover'), false);
+        });
+
+        // Detect selected file
+        fileInput.addEventListener("change", (e) => {
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                filenameLabel.textContent = file.name;
+                filesizeLabel.textContent = (file.size / 1024).toFixed(1) + " KB";
+                instruction.classList.add("d-none");
+                fileInfo.classList.remove("d-none");
+            }
+        });
+
+        // Remove selected file
+        removeBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            fileInput.value = "";
+            fileInfo.classList.add("d-none");
+            instruction.classList.remove("d-none");
+        });
+    });
+</script>
+{% endblock %}

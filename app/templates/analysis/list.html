@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block title %}Analysis History - Aegis ML-IDS{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col-md-6">
+        <h2 class="fw-bold tracking-tight text-dark mb-1">Analysis History</h2>
+        <p class="text-muted fs-7 mb-0">Review model performance statistics and threat assessment jobs.</p>
+    </div>
+    <div class="col-md-6 text-md-end mt-3 mt-md-0">
+        <a href="{{ url_for('analysis.run') }}" class="btn btn-primary rounded-pill px-3 py-2 fs-7">
+            <i class="bi bi-play-fill me-1"></i> Run New Analysis
+        </a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3 bg-white p-4">
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Job ID</th>
+                    <th>Model</th>
+                    <th>Accuracy</th>
+                    <th>F1-Score</th>
+                    <th>Anomalies Found</th>
+                    <th>Threat Score</th>
+                    <th>Status</th>
+                    <th>Executed</th>
+                    <th class="text-end">Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if pagination.items %}
+                    {% for analysis in pagination.items %}
+                        <tr>
+                            <td class="fw-semibold text-dark">#{{ analysis.id }}</td>
+                            <td>
+                                <div class="fw-semibold text-dark text-capitalize">{{ analysis.model_type.replace('_', ' ') }}</div>
+                                <div class="text-muted fs-8">Dataset ID: {{ analysis.dataset_id }}</div>
+                            </td>
+                            <td>{{ (analysis.accuracy * 100) | round(2) }}%</td>
+                            <td>{{ (analysis.f1_score * 100) | round(2) }}%</td>
+                            <td>
+                                <div class="fw-semibold text-danger">{{ analysis.anomalies_detected }}</div>
+                                <div class="text-muted fs-8">out of {{ analysis.total_records }}</div>
+                            </td>
+                            <td>
+                                {% set score = analysis.threat_score %}
+                                {% if score >= 75 %}
+                                    <span class="badge badge-threat-critical">{{ score }}/100</span>
+                                {% elif score >= 50 %}
+                                    <span class="badge badge-threat-high">{{ score }}/100</span>
+                                {% elif score >= 25 %}
+                                    <span class="badge badge-threat-medium">{{ score }}/100</span>
+                                {% else %}
+                                    <span class="badge badge-threat-low">{{ score }}/100</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if analysis.status == 'completed' %}
+                                    <span class="badge bg-success-light text-success border-0"><i class="bi bi-check-circle-fill"></i> Completed</span>
+                                {% elif analysis.status == 'failed' %}
+                                    <span class="badge bg-danger-light text-danger border-0" title="{{ analysis.error_message }}"><i class="bi bi-exclamation-octagon-fill"></i> Failed</span>
+                                {% else %}
+                                    <span class="badge bg-light text-muted border"><i class="bi bi-hourglass-split"></i> {{ analysis.status | capitalize }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted fs-8">
+                                {% if analysis.completed_at %}
+                                    {{ analysis.completed_at.strftime('%Y-%m-%d %H:%M') }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="{{ url_for('analysis.results', analysis_id=analysis.id) }}" class="btn btn-light btn-sm text-dark px-2 rounded-2 fs-8">
+                                    <i class="bi bi-bar-chart-fill me-1"></i> Results
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            <i class="bi bi-folder-x fs-1 mb-2"></i>
+                            <p class="fs-7 mb-0">No analyses executed yet.</p>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination controls -->
+    {% if pagination.pages > 1 %}
+    <nav class="d-flex justify-content-between align-items-center mt-4">
+        <div class="text-muted fs-8">
+            Showing Page {{ pagination.page }} of {{ pagination.pages }} ({{ pagination.total }} total items)
+        </div>
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('analysis.list_view', page=pagination.prev_num) }}">Previous</a>
+            </li>
+            {% for page_num in pagination.iter_pages() %}
+                {% if page_num %}
+                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('analysis.list_view', page=page_num) }}">{{ page_num }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('analysis.list_view', page=pagination.next_num) }}">Next</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

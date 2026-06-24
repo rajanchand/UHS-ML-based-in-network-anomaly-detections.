@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+{% block title %}Traffic Analysis - Aegis ML-IDS{% endblock %}
+
+{% block head %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <a href="{{ url_for('datasets.detail', dataset_id=data.dataset_id) }}" class="text-muted text-decoration-none fs-7 d-inline-flex align-items-center mb-2">
+            <i class="bi bi-arrow-left me-1"></i> Back to Dataset #{{ data.dataset_id }}
+        </a>
+        <h2 class="fw-bold tracking-tight text-dark mb-1">Traffic Pattern Analysis</h2>
+        <p class="text-muted fs-7 mb-0">Dataset: <span class="fw-semibold text-dark">{{ data.filename }}</span></p>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Total Flows Card -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white text-center">
+            <h5 class="fw-bold text-dark mb-1 text-uppercase fs-8 text-muted tracking-wide">Total Flows Analyzed</h5>
+            <div class="d-inline-flex align-items-center justify-content-center bg-primary-light rounded-circle mx-auto my-3" style="width: 80px; height: 80px;">
+                <i class="bi bi-activity text-primary fs-3"></i>
+            </div>
+            <h3 class="fw-bold text-dark mb-0">{{ data.total_rows }}</h3>
+            <p class="text-muted fs-8 mb-0 mt-1">Packets/sessions processed</p>
+        </div>
+    </div>
+
+    <!-- Top Protocol Card -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white text-center">
+            <h5 class="fw-bold text-dark mb-1 text-uppercase fs-8 text-muted tracking-wide">Primary Protocol</h5>
+            <div class="d-inline-flex align-items-center justify-content-center bg-success-light rounded-circle mx-auto my-3" style="width: 80px; height: 80px;">
+                <i class="bi bi-diagram-3 text-success fs-3"></i>
+            </div>
+            {% set ns = namespace(top_proto='Unknown', max_count=0) %}
+            {% for proto, count in data.protocol_distribution.items() %}
+                {% if count > ns.max_count %}
+                    {% set ns.top_proto = proto %}
+                    {% set ns.max_count = count %}
+                {% endif %}
+            {% endfor %}
+            <h3 class="fw-bold text-dark mb-0">{{ ns.top_proto }}</h3>
+            <p class="text-muted fs-8 mb-0 mt-1">{{ data.protocol_distribution.get(ns.top_proto, 0) }} packets</p>
+        </div>
+    </div>
+
+    <!-- Anomaly Percentage Card -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white text-center">
+            <h5 class="fw-bold text-dark mb-1 text-uppercase fs-8 text-muted tracking-wide">Anomaly Ratio</h5>
+            {% set ns_attacks = namespace(total=0) %}
+            {% for attack, count in data.attack_distribution.items() %}
+                {% if attack != 'Normal' and attack != 'Benign' %}
+                    {% set ns_attacks.total = ns_attacks.total + count %}
+                {% endif %}
+            {% endfor %}
+            {% set total_all = data.attack_distribution.values() | sum %}
+            {% set ratio = (ns_attacks.total / total_all * 100) if total_all > 0 else 0.0 %}
+            <div class="d-inline-flex align-items-center justify-content-center bg-{{ 'danger' if ratio > 5 else 'success' }}-light rounded-circle mx-auto my-3" style="width: 80px; height: 80px;">
+                <i class="bi bi-shield-slash text-{{ 'danger' if ratio > 5 else 'success' }} fs-3"></i>
+            </div>
+            <h3 class="fw-bold text-dark mb-0">{{ ratio | round(2) }}%</h3>
+            <p class="text-muted fs-8 mb-0 mt-1">{{ ns_attacks.total }} anomaly instances flagged</p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Protocol distribution -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+            <h5 class="fw-bold text-dark mb-3">Protocol Split</h5>
+            <div style="height: 250px; position: relative;">
+                <canvas id="protocolChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Port distribution -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+            <h5 class="fw-bold text-dark mb-3">Target Ports (Top 5)</h5>
+            <div style="height: 250px; position: relative;">
+                <canvas id="portChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attack Type distribution -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+            <h5 class="fw-bold text-dark mb-3">Traffic Category Breakdown</h5>
+            <div style="height: 250px; position: relative;">
+                <canvas id="attackChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // 1. Protocol Chart (Doughnut)
+        const protocolData = {{ data.protocol_distribution | tojson }};
+        const protoLabels = Object.keys(protocolData);
+        const protoValues = Object.values(protocolData);
+
+        new Chart(document.getElementById('protocolChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: protoLabels,
+                datasets: [{
+                    data: protoValues,
+                    backgroundColor: [
+                        'rgba(37, 99, 235, 0.7)',
+                        'rgba(16, 185, 129, 0.7)',
+                        'rgba(245, 158, 11, 0.7)',
+                        'rgba(107, 114, 128, 0.7)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { font: { family: 'Inter', size: 10 } }
+                    }
+                }
+            }
+        });
+
+        // 2. Port Chart (Horizontal Bar)
+        const portData = {{ data.port_distribution | tojson }};
+        const portLabels = Object.keys(portData);
+        const portValues = Object.values(portData);
+
+        new Chart(document.getElementById('portChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: portLabels,
+                datasets: [{
+                    data: portValues,
+                    backgroundColor: 'rgba(79, 70, 229, 0.7)',
+                    borderColor: '#4f46e5',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, ticks: { font: { family: 'Inter', size: 9 } } },
+                    y: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 9 } } }
+                }
+            }
+        });
+
+        // 3. Attack distribution (Pie)
+        const attackData = {{ data.attack_distribution | tojson }};
+        const attackLabels = Object.keys(attackData);
+        const attackValues = Object.values(attackData);
+
+        new Chart(document.getElementById('attackChart').getContext('2d'), {
+            type: 'pie',
+            data: {
+                labels: attackLabels,
+                datasets: [{
+                    data: attackValues,
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.7)',  // Normal/Benign -> Green
+                        'rgba(239, 68, 68, 0.7)',   // DDoS -> Red
+                        'rgba(244, 63, 94, 0.7)',   // DoS -> Rose
+                        'rgba(245, 158, 11, 0.7)',  // Port Scan -> Orange
+                        'rgba(217, 70, 239, 0.7)',  // Brute Force -> Fuchsia
+                        'rgba(99, 102, 241, 0.7)',  // Bot -> Indigo
+                        'rgba(107, 114, 128, 0.7)'  // Other -> Gray
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { font: { family: 'Inter', size: 9 } }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
