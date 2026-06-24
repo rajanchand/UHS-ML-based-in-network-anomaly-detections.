@@ -16,6 +16,10 @@ from datetime import timedelta
 
 # Base directory of the project
 BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+IS_VERCEL = os.environ.get('VERCEL') == '1'
+
+# Use /tmp for writable directories under Vercel serverless environment
+DATA_DIR = '/tmp' if IS_VERCEL else BASE_DIR
 
 
 class Config:
@@ -30,7 +34,7 @@ class Config:
     # --- Database ---
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         'DATABASE_URL',
-        f'sqlite:///{os.path.join(BASE_DIR, "instance", "anomaly_detection.db")}'
+        f'sqlite:///{os.path.join(DATA_DIR, "anomaly_detection.db" if IS_VERCEL else os.path.join("instance", "anomaly_detection.db"))}'
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
@@ -45,7 +49,7 @@ class Config:
     
     # --- File Upload ---
     MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500 MB max upload size
-    UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+    UPLOAD_FOLDER = os.path.join(DATA_DIR, 'uploads')
     ALLOWED_EXTENSIONS = {'csv'}
     
     # --- Rate Limiting ---
@@ -58,14 +62,14 @@ class Config:
     
     # --- Logging ---
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
-    LOG_FILE = os.environ.get('LOG_FILE', os.path.join(BASE_DIR, 'logs', 'app.log'))
+    LOG_FILE = os.environ.get('LOG_FILE', os.path.join(DATA_DIR, 'app.log' if IS_VERCEL else os.path.join('logs', 'app.log')))
     
     # --- ML Configuration ---
-    ML_MODELS_DIR = os.path.join(BASE_DIR, 'ml_models')
+    ML_MODELS_DIR = os.path.join(DATA_DIR, 'ml_models')
     SHAP_MAX_SAMPLES = 100  # Max samples for SHAP computation (performance)
     
     # --- Reports ---
-    REPORTS_DIR = os.path.join(BASE_DIR, 'reports')
+    REPORTS_DIR = os.path.join(DATA_DIR, 'reports')
 
 
 class DevelopmentConfig(Config):
@@ -111,8 +115,8 @@ class ProductionConfig(Config):
     # Enforce HTTPS cookies in production
     SESSION_COOKIE_SECURE = True
     
-    # Require DATABASE_URL in production
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    # Require DATABASE_URL in production, fallback to local/temp SQLite
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or Config.SQLALCHEMY_DATABASE_URI
     
     # Production-grade connection pooling
     SQLALCHEMY_ENGINE_OPTIONS = {

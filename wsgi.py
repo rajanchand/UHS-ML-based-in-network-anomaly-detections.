@@ -9,6 +9,10 @@ Usage:
 """
 
 from app import create_app
+from app.extensions import db
 
 # Create the Flask application instance using the factory
 app = create_app()
+
+with app.app_context():
+    db.create_all()

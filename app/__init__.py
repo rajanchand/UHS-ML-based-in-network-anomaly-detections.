@@ -158,20 +158,21 @@ def _configure_logging(app):
     console_handler.setFormatter(logging.Formatter(
         '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
     ))
-
-    # File handler with rotation (10 MB max, 10 backups)
-    log_file = app.config.get('LOG_FILE', 'logs/app.log')
-    os.makedirs(os.path.dirname(log_file), exist_ok=True)
-    file_handler = RotatingFileHandler(
-        log_file, maxBytes=10 * 1024 * 1024, backupCount=10
-    )
-    file_handler.setLevel(log_level)
-    file_handler.setFormatter(logging.Formatter(
-        '[%(asctime)s] %(levelname)s in %(module)s (%(pathname)s:%(lineno)d): %(message)s'
-    ))
-
     app.logger.addHandler(console_handler)
-    app.logger.addHandler(file_handler)
+
+    # File handler (skipped on Vercel serverless functions)
+    if os.environ.get('VERCEL') != '1':
+        log_file = app.config.get('LOG_FILE', 'logs/app.log')
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
+        file_handler = RotatingFileHandler(
+            log_file, maxBytes=10 * 1024 * 1024, backupCount=10
+        )
+        file_handler.setLevel(log_level)
+        file_handler.setFormatter(logging.Formatter(
+            '[%(asctime)s] %(levelname)s in %(module)s (%(pathname)s:%(lineno)d): %(message)s'
+        ))
+        app.logger.addHandler(file_handler)
+
     app.logger.setLevel(log_level)
     app.logger.info('Application startup complete')
 
@@ -211,8 +212,11 @@ def _ensure_directories(app):
         app.config.get('UPLOAD_FOLDER', 'uploads'),
         app.config.get('ML_MODELS_DIR', 'ml_models'),
         app.config.get('REPORTS_DIR', 'reports'),
-        os.path.dirname(app.config.get('LOG_FILE', 'logs/app.log')),
     ]
+    # Skip log directory check on Vercel as we do not write to file
+    if os.environ.get('VERCEL') != '1':
+        dirs.append(os.path.dirname(app.config.get('LOG_FILE', 'logs/app.log')))
+        
     for directory in dirs:
         os.makedirs(directory, exist_ok=True)
 
