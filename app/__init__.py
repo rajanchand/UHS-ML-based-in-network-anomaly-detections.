@@ -134,15 +134,18 @@ def _register_error_handlers(app):
 
     @app.errorhandler(500)
     def internal_error(error):
-        """Handle unexpected server errors. Never expose internal details."""
+        """Handle unexpected server errors. Never expose internal details in prod, show traceback for debugging."""
         db.session.rollback()  # Roll back any failed transactions
-        app.logger.error(f'Internal server error: {error}')
+        import traceback
+        tb = traceback.format_exc()
+        app.logger.error(f'Internal server error: {error}\n{tb}')
         if _wants_json():
             return jsonify({
                 'error': 'Internal server error',
-                'message': 'An unexpected error occurred'
+                'message': str(error),
+                'traceback': tb
             }), 500
-        return render_template('errors/500.html'), 500
+        return f"<h3>Internal Server Error (Debugging Traceback)</h3><pre>{tb}</pre>", 500
 
 
 def _configure_logging(app):
