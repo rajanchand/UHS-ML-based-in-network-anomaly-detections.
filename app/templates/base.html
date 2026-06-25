@@ -59,6 +59,7 @@
                         <i class="bi bi-person-circle me-1"></i>{{ current_user.username }}
                         <span class="badge bg-light text-dark border ms-1 fs-8 text-uppercase">{{ current_user.role }}</span>
                     </span>
+                    <a href="{{ url_for('auth.mfa_setup') }}" class="btn btn-outline-primary btn-sm rounded-2"><i class="bi bi-shield-lock"></i> MFA</a>
                     <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-secondary btn-sm rounded-2">Log Out</a>
                 </div>
             </div>

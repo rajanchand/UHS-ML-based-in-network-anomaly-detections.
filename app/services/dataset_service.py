@@ -71,6 +71,16 @@ class DatasetService:
             current_app.logger.error(f'File save failed: {str(e)}')
             return (None, 'Failed to save file')
 
+        # Truncate large files (> 10MB) to the first 20,000 rows to prevent DB size limit hits and training timeout
+        try:
+            raw_size = os.path.getsize(file_path)
+            if raw_size > 10 * 1024 * 1024:
+                current_app.logger.info(f'Large file detected ({raw_size / (1024*1024):.1f} MB). Truncating to 20,000 rows for memory safety.')
+                df_temp = pd.read_csv(file_path, nrows=20000)
+                df_temp.to_csv(file_path, index=False)
+        except Exception as e:
+            current_app.logger.error(f'Truncation failed: {str(e)}')
+
         # Step 3: Compute file hash
         file_hash = compute_file_hash(file_path)
         file_size = os.path.getsize(file_path)

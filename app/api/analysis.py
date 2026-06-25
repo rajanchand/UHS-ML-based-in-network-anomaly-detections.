@@ -132,3 +132,78 @@ def research_comparison():
     analyses = AnalysisService.get_user_analyses(current_user.id, page=1, per_page=100).items
     latest = next((a for a in analyses if a.status == 'completed'), None)
     return render_template('analysis/research_comparison.html', latest=latest)
+
+
+@analysis_bp.route('/api/analysis/<int:analysis_id>/feedback', methods=['POST'])
+@login_required
+def submit_feedback(analysis_id):
+    """Add user active learning labeling feedback on specific prediction index."""
+    from app.models.analysis import ThreatFeedback
+    from app.extensions import db
+    
+    data = request.get_json() or {}
+    row_index = data.get('row_index')
+    label = data.get('label')  # 0 for benign/false positive, or attack code
+
+    if row_index is None or label is None:
+        return jsonify({'error': 'Missing parameters', 'message': 'row_index and label are required.'}), 400
+
+    analysis = AnalysisService.get_analysis(analysis_id, current_user.id)
+    if not analysis:
+        return jsonify({'error': 'Not found', 'message': 'Analysis run not found or access denied.'}), 404
+
+    # Upsert feedback
+    fb = ThreatFeedback.query.filter_by(
+        dataset_id=analysis.dataset_id,
+        row_index=row_index
+    ).first()
+
+    if fb:
+        fb.label = label
+        fb.user_id = current_user.id
+        fb.created_at = datetime.utcnow()
+    else:
+        fb = ThreatFeedback(
+            dataset_id=analysis.dataset_id,
+            row_index=row_index,
+            label=label,
+            user_id=current_user.id
+        )
+        db.session.add(fb)
+
+    db.session.commit()
+
+    AuditService.log_action(
+        action='active_learning_feedback',
+        resource=f'dataset:{analysis.dataset_id}:row:{row_index}',
+        details=f'Assigned label {label} to prediction index {row_index}',
+        user_id=current_user.id
+    )
+
+    return jsonify({
+        'message': 'Feedback successfully registered.',
+        'feedback': fb.to_dict()
+    }), 200
+
+
+@analysis_bp.route('/api/analysis/<int:analysis_id>/retrain', methods=['POST'])
+@login_required
+def retrain_model_endpoint(analysis_id):
+    """Triggers retraining of the model for that analysis incorporating user feedback."""
+    analysis, message = AnalysisService.retrain_analysis(analysis_id, current_user.id)
+    if not analysis:
+        return jsonify({'error': 'Retraining failed', 'message': message}), 400
+
+    AuditService.log_action(
+        action='active_learning_retrain',
+        resource=f'analysis:{analysis.id}',
+        details=f'Model retrained: {message}',
+        user_id=current_user.id
+    )
+
+    return jsonify({
+        'message': 'Retraining completed successfully.',
+        'details': message,
+        'analysis': analysis.to_dict()
+    }), 200
+

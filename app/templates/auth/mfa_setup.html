@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Multi-Factor Authentication - ML-Network Anomaly Detections{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white">
+            <h4 class="fw-bold text-dark mb-2">Multi-Factor Authentication (MFA) Setup</h4>
+            <p class="text-muted fs-7 mb-4">Enhance your dissertation project defense by implementing Time-based One-Time Passwords (TOTP) as a secondary validation layer.</p>
+
+            <div class="p-3 bg-light rounded-3 border mb-4">
+                <div class="d-flex align-items-center mb-2">
+                    <span class="badge bg-{{ 'success' if current_user.mfa_enabled else 'secondary' }} me-2">
+                        {{ 'Enabled' if current_user.mfa_enabled else 'Disabled' }}
+                    </span>
+                    <span class="fs-7 text-muted fw-semibold">Status</span>
+                </div>
+                <p class="fs-8 text-muted mb-0">
+                    {% if current_user.mfa_enabled %}
+                    MFA is active. Every login challenge will require a token verification from your device.
+                    {% else %}
+                    MFA is inactive. Your account uses standard password auth only. We recommend enabling MFA.
+                    {% endif %}
+                </p>
+            </div>
+
+            {% if secret %}
+            <!-- Verification stage -->
+            <div class="alert alert-success border-0 rounded-3 mb-4 fs-7" role="alert">
+                <strong>MFA Configured Successfully!</strong> Please scan the QR code or key into Google Authenticator or Duo to finish connection.
+            </div>
+
+            <div class="text-center my-4">
+                <div class="p-3 bg-light d-inline-block border rounded mb-3">
+                    <!-- Simple fallback showing key configuration details -->
+                    <div class="fw-mono text-dark fw-bold fs-5 mb-1">{{ secret }}</div>
+                    <div class="text-muted fs-8">Manual Setup Secret Key</div>
+                </div>
+                <div class="fs-8 text-muted mx-auto" style="max-width: 400px;">
+                    Enter the secret key above into your mobile Authenticator app (Type: Time-Based). Once loaded, use generated tokens to log in next time.
+                </div>
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('auth.mfa_setup') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                {% if current_user.mfa_enabled %}
+                <input type="hidden" name="action" value="disable">
+                <button type="submit" class="btn btn-danger py-2 rounded-3 fs-7 w-100 shadow-sm">
+                    Disable Multi-Factor Authentication
+                </button>
+                {% else %}
+                <input type="hidden" name="action" value="enable">
+                <button type="submit" class="btn btn-primary py-2 rounded-3 fs-7 w-100 shadow-sm">
+                    Enable Multi-Factor Authentication
+                </button>
+                {% endif %}
+            </form>
+            
+            <div class="text-center mt-3">
+                <a href="{{ url_for('dashboard.index') }}" class="fs-8 text-muted text-decoration-none"><i class="bi bi-arrow-left me-1"></i> Back to Dashboard</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

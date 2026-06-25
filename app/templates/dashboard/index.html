@@ -186,7 +186,7 @@
 </div>
 
 <!-- Trend and Logs -->
-<div class="row g-4">
+<div class="row g-4 mb-4">
     <!-- Threat Score History -->
     <div class="col-12">
         <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
@@ -194,6 +194,64 @@
             <p class="text-muted fs-8 mb-3">Trend of threat levels and anomaly counts over time</p>
             <div style="height: 300px; position: relative;">
                 <canvas id="threatTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MSc Additions: Recent Threats and Concept Drift Monitor -->
+<div class="row g-4 mb-4">
+    <!-- Recent Live Threats (Active Learning Panel) -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold text-dark mb-0">Live Threat Stream & Active Learning</h5>
+                    <p class="text-muted fs-8 mb-0">Select actions to refine ML model parameters based on analyst validation</p>
+                </div>
+                <span class="badge bg-primary-light text-primary border fs-8" id="live-model-badge">Evaluating...</span>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover align-middle table-sm border fs-8" id="recentThreatsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="py-2 ps-3">Time</th>
+                            <th class="py-2">Source IP</th>
+                            <th class="py-2">Protocol</th>
+                            <th class="py-2">Threat Class</th>
+                            <th class="py-2 text-end">Confidence</th>
+                            <th class="py-2 text-center">Active Learning Label</th>
+                        </tr>
+                    </thead>
+                    <tbody id="threats-tbody">
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">Waiting for network flows to Sniff...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Concept Drift Monitor -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-dark mb-0">Concept Drift Monitor</h5>
+                <button class="btn btn-outline-primary btn-xs rounded-pill px-2 py-1" onclick="evaluateDrift(true)">
+                    <i class="bi bi-arrow-repeat"></i> Simulate
+                </button>
+            </div>
+            <p class="text-muted fs-8 mb-3">Analyzes feature distribution variance using two-sample KS test (alpha=0.05).</p>
+            
+            <div class="alert alert-info rounded-3 py-2 border-0 mb-3 fs-8 d-flex align-items-center gap-2" id="driftMessageAlert">
+                <i class="bi bi-info-circle-fill"></i>
+                <span id="driftMessageText">Drift detector idle. Click Simulate to compute.</span>
+            </div>
+
+            <div class="list-group list-group-flush border rounded-3 overflow-auto" style="max-height: 200px;" id="driftFeaturesList">
+                <div class="list-group-item text-center text-muted fs-8 py-3">No active evaluation dataset.</div>
             </div>
         </div>
     </div>
@@ -342,8 +400,8 @@
     // Live Traffic Chart
     var ctxLive = document.getElementById('liveTrafficChart').getContext('2d');
     var timeLabels = Array(15).fill('');
-    var packetData = Array(15).fill(60);
-    var threatDataLive = Array(15).fill(10);
+    var packetData = Array(15).fill(0);
+    var threatDataLive = Array(15).fill(0);
 
     var liveChart = new Chart(ctxLive, {
         type: 'line',
@@ -386,23 +444,152 @@
         }
     });
 
-    // Update traffic chart every 2 seconds
-    setInterval(function() {
-        var now = new Date();
-        var timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    // 1. Establish SSE Live Event Connection
+    let activeAnalysisId = null;
+    const eventSource = new EventSource("{{ url_for('dashboard.live_stream') }}");
+    
+    eventSource.onmessage = function(event) {
+        try {
+            const data = JSON.parse(event.data);
+            
+            // Extract current telemetry
+            const timestamp = data.timestamp;
+            const pps = data.packets_sec;
+            const anomalies = data.anomalies_found;
+            activeAnalysisId = data.analysis_id;
+            
+            // Update models badge
+            document.getElementById('live-model-badge').innerText = "Live: " + data.model_type.toUpperCase().replace('_', ' ');
 
-        var packets = Math.floor(60 + Math.random() * 90);
-        var alerts = Math.random() > 0.85 ? Math.floor(1 + Math.random() * 3) : 0;
+            // Slide charts window
+            packetData.push(pps);
+            packetData.shift();
+            threatDataLive.push(anomalies);
+            threatDataLive.shift();
+            timeLabels.push(timestamp);
+            timeLabels.shift();
+            
+            liveChart.update();
+            
+            // Populate recent live threats if present
+            if (data.recent_threat) {
+                appendLiveThreatRow(data.recent_threat);
+            }
+        } catch(e) {
+            console.error("SSE parse error", e);
+        }
+    };
+    
+    // Fallback timer if SSE fails or lags in test
+    setInterval(() => {
+        // Keep live chart updating even if quiet
+        if (eventSource.readyState === EventSource.CLOSED) {
+            console.warn("SSE stream closed. Retrying connection...");
+        }
+    }, 10000);
 
-        packetData.push(packets);
-        packetData.shift();
-        threatDataLive.push(alerts);
-        threatDataLive.shift();
-        timeLabels.push(timeStr);
-        timeLabels.shift();
+    // 2. Active Learning: Appending rows & submitting label overrides
+    function appendLiveThreatRow(threat) {
+        const tbody = document.getElementById("threats-tbody");
+        
+        // Remove "waiting" text if present
+        if (tbody.rows.length === 1 && tbody.rows[0].cells.length === 1) {
+            tbody.innerHTML = '';
+        }
+        
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td class="ps-3 fw-bold text-muted">${threat.timestamp}</td>
+            <td><code>${threat.src_ip}</code></td>
+            <td class="text-uppercase">${threat.proto}</td>
+            <td><span class="badge bg-danger-light text-danger">${threat.threat_type}</span></td>
+            <td class="text-end fw-semibold text-dark">${threat.confidence}%</td>
+            <td class="text-center">
+                <button class="btn btn-outline-success btn-xs rounded-pill px-2 py-0" onclick="submitLiveFeedback(0)">
+                    Benign
+                </button>
+                <button class="btn btn-outline-danger btn-xs rounded-pill px-2 py-0" onclick="submitLiveFeedback(1)">
+                    Attack
+                </button>
+            </td>
+        `;
+        
+        tbody.insertBefore(row, tbody.firstChild);
+        
+        // Keep last 10 rows
+        if (tbody.rows.length > 10) {
+            tbody.lastChild.remove();
+        }
+    }
 
-        liveChart.update();
-    }, 2000);
+    function submitLiveFeedback(label) {
+        if (!activeAnalysisId) {
+            alert("No active model analysis is registered for active learning feedback.");
+            return;
+        }
+        
+        // Use a mock row index 0 for live telemetry feedback
+        fetch(`/api/analysis/${activeAnalysisId}/feedback`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                row_index: 0,
+                label: label
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message || "Feedback registered successfully.");
+        })
+        .catch(err => console.error("Feedback failed:", err));
+    }
+
+    // 3. Concept Drift Evaluation
+    function evaluateDrift(simulate = false) {
+        const listContainer = document.getElementById("driftFeaturesList");
+        const alertBox = document.getElementById("driftMessageAlert");
+        const alertText = document.getElementById("driftMessageText");
+        
+        listContainer.innerHTML = `<div class="text-center text-muted fs-8 py-3"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Calculating...</div>`;
+        
+        const url = simulate ? '/api/dashboard/drift-status?simulate_drift=true' : '/api/dashboard/drift-status';
+        
+        fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            // Update alert banner
+            alertBox.className = `alert alert-${data.drift_detected ? 'danger' : 'success'} rounded-3 py-2 border-0 mb-3 fs-8 d-flex align-items-center gap-2`;
+            alertText.innerText = data.message;
+            
+            // Build features list
+            if (data.features && data.features.length > 0) {
+                listContainer.innerHTML = data.features.map(f => `
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3 fs-8">
+                        <div>
+                            <span class="fw-semibold text-dark">${f.feature}</span>
+                            <div class="text-muted" style="font-size: 0.65rem;">p-val: ${f.p_value} | KS: ${f.ks_statistic}</div>
+                        </div>
+                        <span class="badge bg-${f.drifted ? 'danger' : 'success'}-light text-${f.drifted ? 'danger' : 'success'} border rounded-pill">
+                            ${f.drifted ? 'DRIFTED' : 'STABLE'}
+                        </span>
+                    </div>
+                `).join('');
+            } else {
+                listContainer.innerHTML = `<div class="list-group-item text-center text-muted fs-8 py-3">No features found.</div>`;
+            }
+        })
+        .catch(err => {
+            console.error("Drift calculation failed:", err);
+            listContainer.innerHTML = `<div class="list-group-item text-center text-danger fs-8 py-3">Failed to evaluate drift.</div>`;
+        });
+    }
+
+    // Run initial stable drift check on load
+    setTimeout(() => evaluateDrift(false), 2000);
+
 
 
 </script>

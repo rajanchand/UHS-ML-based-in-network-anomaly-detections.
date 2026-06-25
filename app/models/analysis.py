@@ -86,7 +86,7 @@ class Analysis(db.Model):
     )
 
     # --- Valid model types ---
-    VALID_MODELS = ('random_forest', 'xgboost', 'isolation_forest')
+    VALID_MODELS = ('random_forest', 'xgboost', 'isolation_forest', 'lstm', 'autoencoder')
     VALID_STATUSES = ('pending', 'running', 'completed', 'failed')
 
     @property
@@ -130,3 +130,34 @@ class Analysis(db.Model):
 
     def __repr__(self):
         return f'<Analysis #{self.id} {self.model_type} ({self.status})>'
+
+
+class ThreatFeedback(db.Model):
+    """
+    Stores analyst feedback for active learning.
+    Allows labeling individual records in a dataset as false positives or confirmed threats.
+    """
+    __tablename__ = 'threat_feedback'
+
+    id = db.Column(db.Integer, primary_key=True)
+    dataset_id = db.Column(db.Integer, db.ForeignKey('datasets.id'), nullable=False, index=True)
+    row_index = db.Column(db.Integer, nullable=False)
+    # 0 = normal (false positive), >0 represents verified attack classes (e.g. 1=DDoS, etc.)
+    label = db.Column(db.Integer, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    dataset = db.relationship('Dataset', backref=db.backref('feedbacks', lazy='dynamic', cascade='all, delete-orphan'))
+    user = db.relationship('User', backref=db.backref('feedbacks', lazy='dynamic'))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'dataset_id': self.dataset_id,
+            'row_index': self.row_index,
+            'label': self.label,
+            'user_id': self.user_id,
+            'created_at': self.created_at.isoformat()
+        }
+

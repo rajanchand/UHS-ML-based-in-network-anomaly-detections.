@@ -52,6 +52,14 @@ class User(UserMixin, db.Model):
         db.Boolean, default=True, nullable=False,
         comment='Whether the account is active (can log in)'
     )
+    mfa_enabled = db.Column(
+        db.Boolean, default=False, nullable=False,
+        comment='Whether Multi-Factor Authentication is enabled'
+    )
+    mfa_secret = db.Column(
+        db.String(32), nullable=True,
+        comment='MFA secret key'
+    )
     created_at = db.Column(
         db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )

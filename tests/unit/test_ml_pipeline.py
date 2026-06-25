@@ -117,3 +117,53 @@ def test_single_class_predict_proba():
         assert np.all(probs_xgb == 0.0)
     except (ImportError, Exception):
         pass
+
+
+def test_lstm_model(sample_traffic_csv):
+    """Verify PyTorch LSTM model training and evaluation."""
+    preprocessor = DataPreprocessor(target_column='label')
+    data = preprocessor.prepare_train_test(sample_traffic_csv, test_size=0.2, balance=False)
+    
+    from app.ml.models import LSTMModel
+    model = LSTMModel(epochs=2)
+    model.train(data['X_train'], data['y_train'])
+    
+    predictions = model.predict(data['X_test'])
+    probabilities = model.predict_proba(data['X_test'])
+    
+    assert len(predictions) == len(data['X_test'])
+    assert len(probabilities) == len(data['X_test'])
+
+
+def test_autoencoder_model(sample_traffic_csv):
+    """Verify PyTorch Autoencoder model training and evaluation."""
+    preprocessor = DataPreprocessor(target_column='label')
+    data = preprocessor.prepare_train_test(sample_traffic_csv, test_size=0.2, balance=False)
+    
+    from app.ml.models import AutoencoderModel
+    model = AutoencoderModel(epochs=2)
+    model.train(data['X_train'])
+    
+    predictions = model.predict(data['X_test'])
+    probabilities = model.predict_proba(data['X_test'])
+    
+    assert len(predictions) == len(data['X_test'])
+    assert len(probabilities) == len(data['X_test'])
+
+
+def test_drift_detector():
+    """Verify concept drift detector triggers correct alerts."""
+    from app.ml.drift_detection import DriftDetector
+    ref = np.random.normal(0, 1, size=(50, 5))
+    # Drifted dataset
+    target_drifted = np.random.normal(5, 1, size=(50, 5))
+    # Stable dataset
+    target_stable = np.random.normal(0, 1, size=(50, 5))
+    
+    detector = DriftDetector()
+    res_stable = detector.detect_drift(ref, target_stable, ['f1', 'f2', 'f3', 'f4', 'f5'])
+    res_drifted = detector.detect_drift(ref, target_drifted, ['f1', 'f2', 'f3', 'f4', 'f5'])
+    
+    assert res_stable['drift_detected'] is False
+    assert res_drifted['drift_detected'] is True
+

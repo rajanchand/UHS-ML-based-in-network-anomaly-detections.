@@ -16,6 +16,13 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 
+try:
+    from imblearn.over_sampling import SMOTE
+    HAS_SMOTE = True
+except ImportError:
+    HAS_SMOTE = False
+
+
 
 class DataPreprocessor:
     """
@@ -206,7 +213,33 @@ class DataPreprocessor:
 
         return X, y, self.feature_names
 
-    def prepare_train_test(self, file_path, test_size=0.2, random_state=42):
+    def balance_data(self, X_train, y_train, random_state=42):
+        """
+        Balances the training set using SMOTE if class imbalance is high.
+        """
+        if not HAS_SMOTE:
+            return X_train, y_train
+            
+        unique, counts = np.unique(y_train, return_counts=True)
+        if len(unique) < 2:
+            return X_train, y_train
+            
+        min_count = counts.min()
+        max_count = counts.max()
+        
+        # Apply SMOTE if minority class is less than 30% of majority class
+        # and we have at least 6 samples to satisfy k_neighbors default or scaled
+        if min_count > 6 and (min_count / max_count) < 0.3:
+            try:
+                k_neighbors = min(5, min_count - 1)
+                smote = SMOTE(random_state=random_state, k_neighbors=k_neighbors)
+                X_resampled, y_resampled = smote.fit_resample(X_train, y_train)
+                return X_resampled, y_resampled
+            except Exception:
+                pass
+        return X_train, y_train
+
+    def prepare_train_test(self, file_path, test_size=0.2, random_state=42, balance=True):
         """
         Load, preprocess, and split data into train/test sets.
 
@@ -214,6 +247,7 @@ class DataPreprocessor:
             file_path: Path to the CSV file.
             test_size: Fraction for the test set (default 20%).
             random_state: Random seed for reproducibility.
+            balance: Whether to apply SMOTE balancing to X_train/y_train.
 
         Returns:
             Dict with X_train, X_test, y_train, y_test, feature_names.
@@ -234,6 +268,8 @@ class DataPreprocessor:
                 X, y, test_size=test_size, random_state=random_state,
                 stratify=y
             )
+            if balance:
+                X_train, y_train = self.balance_data(X_train, y_train, random_state=random_state)
         else:
             # Random split for unsupervised/single-class
             X_train, X_test, y_train, y_test = train_test_split(
@@ -248,3 +284,4 @@ class DataPreprocessor:
             'feature_names': feature_names,
             'total_records': len(df),
         }
+

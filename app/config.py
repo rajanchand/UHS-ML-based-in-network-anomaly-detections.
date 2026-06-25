@@ -76,10 +76,15 @@ class Config:
 
     SQLALCHEMY_DATABASE_URI = _db_url or f'sqlite:///{os.path.join(DATA_DIR, "anomaly_detection.db" if IS_VERCEL else os.path.join("instance", "anomaly_detection.db"))}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
+    
+    # Configure engine options dynamically to set connection timeout for PostgreSQL
+    _engine_options = {
         'pool_pre_ping': True,       # Verify connections before use
         'pool_recycle': 300,         # Recycle connections every 5 minutes
     }
+    if SQLALCHEMY_DATABASE_URI.startswith('postgresql'):
+        _engine_options['connect_args'] = {'connect_timeout': 5}
+    SQLALCHEMY_ENGINE_OPTIONS = _engine_options
 
     # --- Session Security ---
     SESSION_COOKIE_HTTPONLY = True    # Prevent JS access to session cookie
@@ -157,13 +162,16 @@ class ProductionConfig(Config):
     # Require DATABASE_URL in production, fallback to local/temp SQLite
     SQLALCHEMY_DATABASE_URI = Config.SQLALCHEMY_DATABASE_URI
     
-    # Production-grade connection pooling
-    SQLALCHEMY_ENGINE_OPTIONS = {
+    # Production-grade connection pooling with connection timeout for PostgreSQL
+    _engine_options = {
         'pool_pre_ping': True,
         'pool_recycle': 300,
         'pool_size': 10,
         'max_overflow': 20,
     }
+    if SQLALCHEMY_DATABASE_URI.startswith('postgresql'):
+        _engine_options['connect_args'] = {'connect_timeout': 5}
+    SQLALCHEMY_ENGINE_OPTIONS = _engine_options
 
 
 # Configuration mapping for easy lookup

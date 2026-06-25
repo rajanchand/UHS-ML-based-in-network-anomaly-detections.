@@ -30,14 +30,16 @@
                         {% else %}
                             <option value="xgboost" disabled>XGBoost (Not installed)</option>
                         {% endif %}
-                        <option value="isolation_forest">Isolation Forest</option>
+                        <option value="lstm">LSTM (Temporal)</option>
+                        <option value="isolation_forest">Isolation Forest (Unsupervised)</option>
+                        <option value="autoencoder">Autoencoder (Unsupervised)</option>
                     </select>
                 </div>
 
                 <div class="mb-4" id="targetColumnGroup">
                     <label for="target_column" class="form-label fs-7 fw-semibold text-dark">Target Column</label>
                     <input type="text" class="form-control fs-7" id="target_column" name="target_column" value="label" placeholder="e.g. label, class, anomaly">
-                    <div class="form-text fs-8 text-muted">The column containing class labels (0 = normal, 1 = attack). Not used for Isolation Forest.</div>
+                    <div class="form-text fs-8 text-muted">The column containing class labels (0 = normal, 1 = attack). Not used for unsupervised models.</div>
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100 py-2 rounded-3 fs-7" id="runBtn">
@@ -69,7 +71,7 @@
         var targetGroup = document.getElementById("targetColumnGroup");
 
         modelSelect.addEventListener("change", function() {
-            if (modelSelect.value === 'isolation_forest') {
+            if (modelSelect.value === 'isolation_forest' || modelSelect.value === 'autoencoder') {
                 targetGroup.classList.add("d-none");
             } else {
                 targetGroup.classList.remove("d-none");
