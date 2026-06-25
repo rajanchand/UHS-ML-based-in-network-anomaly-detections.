@@ -39,8 +39,8 @@ def test_sql_injection_defense(client, db_session):
     assert b'Invalid username or password' in res.data
 
 
-def test_malicious_xss_prevention(client, db_session):
-    """Verify HTML sanitizers clean or reject usernames with script injection tags."""
+def test_malicious_xss_prevention(client):
+    """Verify that posting to registration returns a 404 status now that registration is disabled."""
     reg_payload = {
         'username': "<script>alert('xss')</script>user",
         'email': 'clean@example.com',
@@ -48,9 +48,7 @@ def test_malicious_xss_prevention(client, db_session):
         'confirm_password': 'SecureP@ssword1!'
     }
     res = client.post('/register', data=reg_payload, follow_redirects=True)
-    
-    # Verification schemas should flag validation errors or sanitizer cleans payload
-    assert b'Username contains invalid characters' in res.data or b"alert('xss')" not in res.data
+    assert res.status_code == 404
 
 
 def test_invalid_mime_file_upload(client, seed_users):

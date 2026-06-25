@@ -11,67 +11,12 @@ from marshmallow import ValidationError
 
 from app.services.auth_service import AuthService
 from app.services.audit_service import AuditService
-from app.utils.validators import RegistrationSchema, LoginSchema
+from app.utils.validators import LoginSchema
 from app.utils.decorators import audit_action
 
 auth_bp = Blueprint('auth', __name__)
 
-registration_schema = RegistrationSchema()
 login_schema = LoginSchema()
-
-
-@auth_bp.route('/register', methods=['GET', 'POST'])
-def register():
-    """User registration view and API endpoint."""
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard.index'))
-
-    if request.method == 'POST':
-        # Check if JSON or form data
-        if request.is_json:
-            data = request.get_json()
-        else:
-            data = request.form.to_dict()
-
-        try:
-            # Validate input schema
-            validated_data = registration_schema.load(data)
-        except ValidationError as err:
-            if request.is_json:
-                return jsonify({'error': 'Validation error', 'messages': err.messages}), 400
-            for field, messages in err.messages.items():
-                for msg in messages:
-                    flash(f"{field.capitalize()}: {msg}", 'danger')
-            return render_template('auth/register.html')
-
-        user, errors = AuthService.register_user(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            password=validated_data['password'],
-            confirm_password=validated_data['confirm_password']
-        )
-
-        if errors:
-            if request.is_json:
-                return jsonify({'error': 'Registration failed', 'messages': errors}), 400
-            for err in errors:
-                flash(err, 'danger')
-            return render_template('auth/register.html')
-
-        # Log audit entry
-        AuditService.log_action(
-            action='register',
-            resource=f'user:{user.id}',
-            details=f'User registered: {user.username}',
-            user_id=user.id
-        )
-
-        flash('Registration successful! Please log in.', 'success')
-        if request.is_json:
-            return jsonify({'message': 'Registration successful', 'user': user.to_dict()}), 201
-        return redirect(url_for('auth.login'))
-
-    return render_template('auth/register.html')
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
