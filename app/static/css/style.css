@@ -1,9 +1,6 @@
-/* 
-=============================================================================
-ML based in network anomaly detections. Style System
-=============================================================================
-Premium light theme with soft glassmorphic panels, deep Navy & Royal Blue accents,
-refined typography, micro-interactions, and mobile-first layouts.
+/*
+  ML-Network Anomaly Detections — Stylesheet
+  Clean light theme with soft panels, blue accents, and readable typography.
 */
 
 :root {
@@ -25,18 +22,16 @@ refined typography, micro-interactions, and mobile-first layouts.
     --body-bg: #f8fafc;
     --card-bg: #ffffff;
     --border-color: #e2e8f0;
-    
-    /* Shadows */
+
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
-    
-    /* Transitions */
+
     --transition-fast: all 0.15s ease-in-out;
     --transition-normal: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Base resets & global styles */
+/* Base */
 body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     background-color: var(--body-bg);
@@ -45,7 +40,7 @@ body {
     letter-spacing: -0.011em;
 }
 
-/* Custom Scrollbar */
+/* Scrollbar */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -61,7 +56,7 @@ body {
     background: var(--gray-600);
 }
 
-/* Typography settings */
+/* Typography */
 .tracking-tight {
     letter-spacing: -0.025em;
 }
@@ -72,16 +67,58 @@ body {
     font-size: 0.75rem;
 }
 
-/* Glassmorphism elements */
-.glass-panel {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 12px;
+/* Top Navigation Bar */
+.top-navbar {
+    box-shadow: var(--shadow-sm);
+    padding: 0.5rem 0;
 }
 
-/* Dashboard Cards & Layout */
+.top-navbar .navbar-brand {
+    font-size: 1rem;
+}
+
+.top-navbar .nav-link {
+    color: var(--gray-600);
+    font-weight: 500;
+    font-size: 0.875rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: 6px;
+    transition: var(--transition-fast);
+}
+
+.top-navbar .nav-link:hover {
+    color: var(--dark);
+    background-color: var(--gray-100);
+}
+
+.top-navbar .nav-link.active {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.top-navbar .dropdown-menu {
+    border-radius: 8px;
+    padding: 0.35rem;
+    min-width: 180px;
+}
+
+.top-navbar .dropdown-item {
+    font-size: 0.85rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 5px;
+    transition: var(--transition-fast);
+}
+
+.top-navbar .dropdown-item:hover {
+    background-color: var(--gray-100);
+}
+
+.top-navbar .dropdown-item.active {
+    background-color: var(--primary);
+    color: #fff;
+}
+
+/* Dashboard Cards */
 .card-kpi {
     border: 1px solid var(--border-color);
     border-radius: 12px;
@@ -89,7 +126,7 @@ body {
     background-color: var(--card-bg);
 }
 .card-kpi:hover {
-    transform: translateY(-4px);
+    transform: translateY(-3px);
     box-shadow: var(--shadow-lg);
     border-color: var(--primary);
 }
@@ -104,7 +141,7 @@ body {
     font-size: 1.25rem;
 }
 
-/* Buttons custom override */
+/* Buttons */
 .btn {
     font-weight: 500;
     transition: var(--transition-fast);
@@ -118,7 +155,7 @@ body {
     border-color: var(--primary-hover);
 }
 
-/* Table styling */
+/* Tables */
 .table-responsive {
     border-radius: 10px;
     border: 1px solid var(--border-color);
@@ -143,7 +180,7 @@ body {
     border-bottom: 1px solid var(--border-color);
 }
 
-/* Drag & Drop Upload Zone */
+/* Upload Zone */
 .upload-zone {
     border: 2px dashed var(--gray-300);
     border-radius: 12px;
@@ -156,7 +193,7 @@ body {
     background-color: var(--primary-light);
 }
 
-/* Badge variants */
+/* Threat Badges */
 .badge-threat-low {
     background-color: var(--success-light);
     color: var(--success);
@@ -186,7 +223,7 @@ body {
     background-color: var(--card-bg);
 }
 
-/* Telemetry list */
+/* Log Items */
 .telemetry-item {
     border-left: 3px solid transparent;
     transition: var(--transition-fast);
@@ -198,3 +235,38 @@ body {
 .telemetry-item.medium { border-left-color: var(--warning); }
 .telemetry-item.high { border-left-color: #ea580c; }
 .telemetry-item.critical { border-left-color: var(--danger); }
+
+/* Glass Panel */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+}
+
+/* Pulsing Status Dot */
+.pulsing-dot {
+    width: 8px;
+    height: 8px;
+    background-color: var(--success);
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulse 1.6s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}

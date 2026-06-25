@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Log In - ML based in network anomaly detections.{% endblock %}
+{% block title %}Log In - ML-Network Anomaly Detections{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center align-items-center min-vh-75">
@@ -11,14 +11,12 @@
                         <i class="bi bi-shield-lock-fill fs-2"></i>
                     </div>
                     <h4 class="fw-bold tracking-tight text-dark mb-1">Welcome back</h4>
-                    <p class="text-muted fs-7">Enter your credentials to access ML based in network anomaly detections.</p>
+                    <p class="text-muted fs-7">Sign in to access the anomaly detection system.</p>
                 </div>
 
                 <form method="POST" action="{{ url_for('auth.login') }}" autocomplete="off">
-                    <!-- CSRF Token -->
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                    <!-- Username input -->
                     <div class="mb-3">
                         <label for="username" class="form-label fs-7 fw-semibold text-dark">Username</label>
                         <div class="input-group">
@@ -27,20 +25,16 @@
                         </div>
                     </div>
 
-                    <!-- Password input -->
                     <div class="mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <label for="password" class="form-label fs-7 fw-semibold text-dark mb-0">Password</label>
-                        </div>
+                        <label for="password" class="form-label fs-7 fw-semibold text-dark mb-1">Password</label>
                         <div class="input-group">
                             <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-key"></i></span>
-                            <input type="password" class="form-control bg-light border-start-0 fs-7" id="password" name="password" placeholder="••••••••" required>
+                            <input type="password" class="form-control bg-light border-start-0 fs-7" id="password" name="password" placeholder="Enter password" required>
                         </div>
                     </div>
 
-                    <!-- Submit Button -->
-                    <button type="submit" class="btn btn-primary w-100 py-2.5 rounded-3 fs-7 mb-3 shadow-sm">
-                        <i class="bi bi-box-arrow-in-right me-1"></i> Log In
+                    <button type="submit" class="btn btn-primary w-100 py-2 rounded-3 fs-7 mb-3 shadow-sm">
+                        Log In
                     </button>
                 </form>
 

@@ -1,6 +1,6 @@
-# Aegis: Machine Learning Based Network Anomaly Detection System
+# ML-Network Anomaly Detections
 
-Aegis is a production-ready, security-first Intrusion Detection System (IDS) that applies machine learning classifiers to raw network traffic metadata to identify threat signatures and malicious intrusions.
+This is a production-ready, security-first Intrusion Detection System (IDS) that applies machine learning classifiers to raw network traffic metadata to identify threat signatures and malicious intrusions.
 
 ## Core Features
 * **ML Engines**: Random Forest (Supervised Ensemble), XGBoost (Gradient Boosted Trees), and Isolation Forest (Unsupervised Anomaly).

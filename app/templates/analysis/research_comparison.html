@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Research Literature Comparison - ML based in network anomaly detections.{% endblock %}
+{% block title %}Research Literature Comparison - ML-Network Anomaly Detections{% endblock %}
 
 {% block head %}
 <!-- Chart.js CDN -->
@@ -75,7 +75,7 @@
                     <tbody>
                         <!-- Live Model Run -->
                         <tr class="table-primary">
-                            <td class="py-3 ps-3 fw-bold">Live Model (Aegis Run{% if latest %} #{{ latest.id }}{% endif %})</td>
+                            <td class="py-3 ps-3 fw-bold">Live Model (Our Run{% if latest %} #{{ latest.id }}{% endif %})</td>
                             <td class="fw-semibold text-capitalize">{% if latest %}{{ latest.model_type.replace('_', ' ') }}{% else %}No Run Loaded{% endif %}</td>
                             <td class="text-end fw-bold">{% if latest %}{{ (latest.accuracy * 100) | round(2) }}%{% else %}-{% endif %}</td>
                             <td class="text-end">{% if latest %}{{ (latest.precision_score * 100) | round(2) }}%{% else %}-{% endif %}</td>
@@ -149,7 +149,7 @@
         // Only add live run to comparison if data exists
         if (liveF1 > 0) {
             datasets.unshift({
-                label: 'Live Model (Aegis Run)',
+                label: 'Live Model (Our Run)',
                 data: [liveAcc, livePrec, liveRec, liveF1],
                 backgroundColor: 'rgba(37, 99, 235, 0.7)',
                 borderColor: '#2563eb',

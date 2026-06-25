@@ -1,5 +1,5 @@
 # =============================================================================
-# Aegis ML-IDS - Production Orchestration Configuration
+# ML-Network Anomaly Detections - Docker Compose
 # =============================================================================
 
 version: '3.8'
@@ -8,7 +8,7 @@ services:
   # Database Service (PostgreSQL)
   db:
     image: postgres:16-alpine
-    container_name: aegis_db
+    container_name: mlnad_db
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-anomaly_user}
@@ -29,13 +29,13 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    container_name: aegis_web
+    container_name: mlnad_web
     restart: always
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-anomaly_user}:${POSTGRES_PASSWORD:-secure_password_here}@db:5432/${POSTGRES_DB:-anomaly_detection}
       - SECRET_KEY=${SECRET_KEY:-change-this-to-a-long-random-string-in-production}
       - FLASK_ENV=production
-      - SESSION_COOKIE_SECURE=true
+      - SESSION_COOKIE_SECURE=false
       - RATELIMIT_STORAGE_URL=memory://
     volumes:
       - uploads_data:/app/uploads
@@ -50,7 +50,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.nginx
-    container_name: aegis_nginx
+    container_name: mlnad_nginx
     restart: always
     ports:
       - "80:80"

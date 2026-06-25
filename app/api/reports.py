@@ -69,10 +69,16 @@ def generate():
         user_id=current_user.id
     )
 
-    flash('Report generated successfully!', 'success')
     if request.is_json:
         return jsonify({'message': 'Report generated', 'report': report.to_dict()}), 201
-    return redirect(url_for('reports.list_view'))
+        
+    path = ReportService.get_report_path(report)
+    return send_file(
+        path,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=report.filename
+    )
 
 
 @reports_bp.route('/reports/<int:report_id>/download', methods=['GET'])

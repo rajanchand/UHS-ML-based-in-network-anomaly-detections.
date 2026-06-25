@@ -29,10 +29,3 @@ def get_stats():
     stats = AnalysisService.get_dashboard_stats(current_user.id)
     return jsonify(stats), 200
 
-
-@dashboard_bp.route('/api/dashboard/recent-activity', methods=['GET'])
-@login_required
-def get_recent_activity():
-    """JSON API endpoint for recent audit logs related to current user."""
-    logs = AuditService.get_user_logs(current_user.id, limit=10)
-    return jsonify([log.to_dict() for log in logs]), 200

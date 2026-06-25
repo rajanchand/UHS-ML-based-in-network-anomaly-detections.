@@ -46,7 +46,7 @@ ENV PYTHONUNBUFFERED=1
 
 # Create execution script
 RUN echo '#!/bin/sh\n\
-python3 -c "from app import create_app; from app.extensions import db; app = create_app(); with app.app_context(): db.create_all()"\n\
+python3 -c "from app import create_app; from app.extensions import db; app = create_app(); ctx = app.app_context(); ctx.push(); db.create_all(); ctx.pop()"\n\
 flask db upgrade || true\n\
 gunicorn wsgi:app --bind 0.0.0.0:5000 --workers 4 --threads 2 --timeout 60\n\
 ' > /entrypoint.sh && chmod +x /entrypoint.sh

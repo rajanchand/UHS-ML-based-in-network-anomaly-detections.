@@ -72,6 +72,15 @@ def create_app(config_name=None):
         except (ValueError, TypeError):
             return value
 
+    # Seed demo database if empty (excluding test environment)
+    if not app.config.get('TESTING'):
+        with app.app_context():
+            try:
+                from app.utils.seeder import seed_database
+                seed_database()
+            except Exception as e:
+                app.logger.error(f"Seeder failed: {e}")
+
     return app
 
 
@@ -93,12 +102,14 @@ def _register_blueprints(app):
     from app.api.datasets import datasets_bp
     from app.api.analysis import analysis_bp
     from app.api.reports import reports_bp
+    from app.api.admin import admin_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(datasets_bp)
     app.register_blueprint(analysis_bp)
     app.register_blueprint(reports_bp)
+    app.register_blueprint(admin_bp)
 
 
 def _register_error_handlers(app):

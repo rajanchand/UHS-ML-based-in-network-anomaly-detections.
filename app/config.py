@@ -151,8 +151,8 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
     
-    # Enforce HTTPS cookies in production
-    SESSION_COOKIE_SECURE = True
+    # Enforce HTTPS cookies in production (can be disabled for HTTP-only deployments)
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'true').lower() == 'true'
     
     # Require DATABASE_URL in production, fallback to local/temp SQLite
     SQLALCHEMY_DATABASE_URI = Config.SQLALCHEMY_DATABASE_URI
