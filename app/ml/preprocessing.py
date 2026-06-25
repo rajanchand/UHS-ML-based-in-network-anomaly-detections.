@@ -170,6 +170,24 @@ class DataPreprocessor:
             # For unsupervised models, create dummy target
             y = np.zeros(len(df))
 
+        # Align features to what was fitted if doing inference
+        if not fit and self.is_fitted:
+            aligned_df = pd.DataFrame(0.0, index=df.index, columns=self.feature_names)
+            for col in self.feature_names:
+                if col in df.columns:
+                    aligned_df[col] = df[col]
+                else:
+                    col_lower = col.lower().strip()
+                    matched = False
+                    for df_col in df.columns:
+                        if df_col.lower().strip() == col_lower:
+                            aligned_df[col] = df[df_col]
+                            matched = True
+                            break
+                    if not matched:
+                        aligned_df[col] = 0.0
+            df = aligned_df
+
         # Step 3: Handle missing values
         # Numerical: fill with median
         numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
